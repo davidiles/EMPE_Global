@@ -4,14 +4,14 @@ my.packs <- c('jagsUI',"ggplot2",'reshape2','scales','tidyverse',
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
-setwd("~/1_Work/GoogleDrive_emperor_satellite/GoogleDrive_emperorsatellite/Global_Analysis/analysis/version_3/")
+setwd("~/1_Work/GoogleDrive_emperor_satellite/GoogleDrive_emperorsatellite/EMPE_Global/analysis")
 
 rm(list=ls())
 
 year_range <- 2009:2018
 
 # Read in EMPE satellite data
-sat <- read.csv("../../../data/satellite_data_2021_06_13.csv") # Previously satellite.csv
+sat <- read.csv("../../data/empe_satellite.csv") # Previously satellite.csv
 sat$site_id <- as.character(sat$site_id)
 sat$area_m2 <- as.numeric(sat$area_m2)
 sat <- subset(sat, !is.na(area_m2))
@@ -20,7 +20,7 @@ sat$bpresent[which(sat$bpresent == "NA")] <- NA
 sat <- subset(sat,img_year %in% year_range)
 
 # Read in EMPE aerial data
-aer <- read.csv("../../../data/aerial_addedMAL_20210422_update.csv")
+aer <- read.csv("../../data/empe_aerial.csv")
 aer_adults <- subset(aer, count_type == "adults")
 aer_adults$site_id <- as.character(aer_adults$site_id)
 colnames(aer_adults)[which(colnames(aer_adults) == "penguin_count")] <- "adult_count"
@@ -29,21 +29,12 @@ aer_adults <- aer_adults[,c("site_id","year","adult_count","adult_accuracy","cou
 
 aer_adults <- subset(aer_adults, year %in% year_range)
 
-# ----------------------------------
-# Sites to exclude (temporary)
-
-n_counts_satellite <- sat %>%
-  group_by(site_id,img_year) %>%
-  summarize(n_nonzero = sum(area_m2>0)) %>%
-  group_by(site_id) %>%
-  summarize(enough_years= sum(n_nonzero)>=3)
-
-sites_to_exclude <- NULL
-sites_to_exclude <- subset(n_counts_satellite,!enough_years)$site_id
-sites_to_exclude <- c(sites_to_exclude, "NWIS", "BARB","SANA_N","SANA_S")
+# Sites to exclude (just a single zero count)
+sites_to_exclude <- "BUIS"
 
 aer_adults <- subset(aer_adults, !(site_id %in% sites_to_exclude))
 sat <- subset(sat, !(site_id %in% sites_to_exclude))
+
 # ----------------------------------
 
 sites <- c(aer_adults$site_id,sat$site_id) %>% unique() %>% sort()
@@ -59,8 +50,10 @@ aer_adults$year_number <- match(aer_adults$year,years)
 sat$site_number <- match(sat$site_id,sites)
 sat$year_number <- match(sat$img_year,years)
 
-#From MAPPPD - convert accuracy to lognormal precision
-#accuracy_to_precision <- data.frame(accuracy = c(1,2,3,4,5), precision = c(1612.798190,407.160648,69.313726,20.419275,4.998676))
+colony_attributes <- read.csv("../../data/colony_attributes.csv") %>% left_join(data.frame(site_number = 1:length(sites), site_id = sites))
+sat <- left_join(sat, colony_attributes) %>% mutate(site_id = fct_reorder(site_id, lon)) 
+aer_adults <- left_join(aer_adults, colony_attributes) %>% mutate(site_id = fct_reorder(site_id, lon)) 
+
 
 # Plot available data
 p1 <- ggplot() +
@@ -76,12 +69,13 @@ p1 <- ggplot() +
   
   #scale_x_continuous(breaks = year_vec, minor_breaks = NULL)+
   
-  ylab("Penguin abundance")+
+  ylab("Count")+
   xlab("Year")+
   facet_grid(site_id~., scales = "free_y")+
-  theme_bw()
+  theme_bw()+
+  theme_few()
 
-pdf("./output_empirical/Fig1_data.pdf", width = 6, height = n_sites*0.8)
+pdf("output_empirical/Fig1_data.pdf", width = 6, height = n_sites*0.8)
 print(p1)
 dev.off()
 
@@ -137,12 +131,11 @@ jags.data <- list( n_years = n_years,
                    satellite_year = sat$year_number
 )
 
-
-
+# For calculating log-linear trend (least squares regression line)
+XX=cbind(rep(1,jags.data$n_years),1:jags.data$n_years)
+jags.data$regression_weights <- matrix(c(0,1),1,2)%*%solve(t(XX)%*%XX)%*%t(XX)
 
 #Generate initial values
-
-
 inits <- function(){list(r_mean = rep(0,jags.data$n_sites),
                          r_sd = runif(1,0,1),
                          z_occ = matrix(1,ncol = n_years, nrow = n_sites),
@@ -151,4 +144,4 @@ inits <- function(){list(r_mean = rep(0,jags.data$n_sites),
                          sat_CV = 0.1)}
 
 
-save.image("EMPE_data_prepared.RData")
+save.image("output_empirical/EMPE_data_prepared.RData")
