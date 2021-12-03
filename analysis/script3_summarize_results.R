@@ -73,6 +73,7 @@ p2 = ggplot(data = colony_estimates) +
   
   geom_point(data = sat, aes(x = img_year, y = area_m2, shape = "Satellite count"))+
   geom_point(data = aer_adults, aes(x = year, y = adult_count, shape = "Aerial count (adult)"))+
+  geom_point(aes(x = 2010,y=0), col = "transparent")+
   
   scale_shape_manual(name = 'Obs type', values =c('Satellite count'=4,'Aerial count (adult)'= 19))+
   
@@ -87,88 +88,61 @@ pdf(file = "output_empirical/Fig2_colony_dynamics.pdf", width = 6, height = n_si
 print(p2)
 dev.off()
 
-#----------------------------------------------------------
-# Calculate estimates of trend
-#----------------------------------------------------------
-
-colony_trends <- out$sims.list$site_trend %>% 
-  reshape2::melt() %>% 
-  rename(mcmc_sample = Var1, site_number = Var2, trend = value) %>%
-  group_by(site_number) %>%
-  summarize(trend_q025 = quantile(trend,0.025),
-            trend_q500 = quantile(trend,0.500),
-            trend_q975 = quantile(trend,0.975)) %>%
-  left_join(colony_attributes) %>%
-  arrange(lon)
-colony_trends$site_id <- fct_reorder(colony_trends$site_id, colony_trends$lon)
-
-lim <- max(abs(colony_trends[,c("trend_q025","trend_q975")]),na.rm = TRUE)
-trend_2D <- ggplot(colony_trends, aes(x=site_id, y = trend_q500, ymin = trend_q025, ymax = trend_q975)) +
-  geom_hline(yintercept = 0, linetype = 2, col = "gray80")+
-  geom_errorbar(width = 0)+
-  geom_point()+
-  theme_bw()+
-  scale_x_discrete(guide = guide_axis(angle = 45))+
-  coord_cartesian(ylim = c(-lim,lim))+
-  ylab("Log-linear trend")+
-  xlab("Site ID")
-trend_2D
-
-pdf(file = "output_empirical/FigX_trend_2D.pdf", width = 8, height = 4)
-print(trend_2D )
-dev.off()
-
-#----------------------------------------------------------
-# Map of colony trends
-#----------------------------------------------------------
-
-world <- map_data("world")
-#lim <- max(abs(colony_estimates$trend_q500),na.rm = TRUE)
-trend_map <- ggplot(world, aes(x=long, y=lat, group=group)) +
-  geom_polygon(fill = "gray95", col = "gray55",alpha=0.5) +
-  scale_y_continuous(breaks=(-2:2) * 30, limits = c(-90,-60)) +
-  scale_x_continuous(breaks=(-4:4) * 45) +
-  coord_map("ortho", orientation=c(-90, 0, 0)) +
-  theme_bw()+
-  theme(axis.text = element_blank(),
-        axis.title = element_blank(),
-        axis.ticks=element_blank(),
-        panel.border = element_blank()) +
-  
-  geom_point(data = colony_estimates,aes(col = trend_q500,group=1, size = N_2009_q500))+
-  #geom_label_repel(data = colony_estimates,aes(col = trend_q500,group=1, label = site_id))+
-  scale_color_gradientn(colors = c("red","gray90","blue"),limits = c(-lim,lim), name = "Trend in log(X[t])")+
-  scale_size_continuous(name = "N in 2009")
-print(trend_map)
-
-pdf(file = "output_empirical/FigX_trend_map.pdf", width = 8, height = 8)
-print(trend_map)
-dev.off()
-
-#----------------------------------------------------------
-# Map of change (2018 relative to 2009)
-#----------------------------------------------------------
-lim <- max(abs(colony_estimates$Ndiff_q500),na.rm = TRUE)
-change_map <- ggplot(world, aes(x=long, y=lat, group=group)) +
-  geom_polygon(fill = "gray95", col = "gray55",alpha=0.5) +
-  scale_y_continuous(breaks=(-2:2) * 30, limits = c(-90,-60)) +
-  scale_x_continuous(breaks=(-4:4) * 45) +
-  coord_map("ortho", orientation=c(-90, 0, 0)) +
-  theme_bw()+
-  theme(axis.text = element_blank(),
-        axis.title = element_blank(),
-        axis.ticks=element_blank(),
-        panel.border = element_blank()) +
-  
-  geom_point(data = colony_estimates,aes(col = Ndiff_q500 > 0,group=1, size = abs(Ndiff_q500)), alpha = 0.5)+
-  #geom_label_repel(data = colony_estimates,aes(col = trend_q500,group=1, label = site_id))+
-  scale_color_manual(values = c("red","blue"), labels = c("Decrease","Increase"), name = "Direction of Change",na.translate = FALSE)+
-  scale_size_continuous(name = "Change in abundance")
-print(change_map)
-
-pdf(file = "output_empirical/FigX_change_map.pdf", width = 8, height = 8)
-print(change_map)
-dev.off()
+# #----------------------------------------------------------
+# # Calculate trend (log-linear slope)
+# #----------------------------------------------------------
+# 
+# colony_trends <- out$sims.list$site_trend %>% 
+#   reshape2::melt() %>% 
+#   rename(mcmc_sample = Var1, site_number = Var2, trend = value) %>%
+#   group_by(site_number) %>%
+#   summarize(trend_q025 = quantile(trend,0.025),
+#             trend_q500 = quantile(trend,0.500),
+#             trend_q975 = quantile(trend,0.975)) %>%
+#   left_join(colony_attributes) %>%
+#   arrange(lon)
+# colony_trends$site_id <- fct_reorder(colony_trends$site_id, colony_trends$lon)
+# 
+# lim <- max(abs(colony_trends[,c("trend_q025","trend_q975")]),na.rm = TRUE)
+# trend_2D <- ggplot(colony_trends, aes(x=site_id, y = trend_q500, ymin = trend_q025, ymax = trend_q975)) +
+#   geom_hline(yintercept = 0, linetype = 2, col = "gray80")+
+#   geom_errorbar(width = 0)+
+#   geom_point()+
+#   theme_bw()+
+#   scale_x_discrete(guide = guide_axis(angle = 45))+
+#   coord_cartesian(ylim = c(-lim,lim))+
+#   ylab("Log-linear trend")+
+#   xlab("Site ID")
+# trend_2D
+# 
+# pdf(file = "output_empirical/FigX_trend_2D.pdf", width = 8, height = 4)
+# print(trend_2D )
+# dev.off()
+# 
+# #----------------------------------------------------------
+# # Map of change (2018 relative to 2009)
+# #----------------------------------------------------------
+# lim <- max(abs(colony_estimates$Ndiff_q500),na.rm = TRUE)
+# change_map <- ggplot(world, aes(x=long, y=lat, group=group)) +
+#   geom_polygon(fill = "gray95", col = "gray55",alpha=0.5) +
+#   scale_y_continuous(breaks=(-2:2) * 30, limits = c(-90,-60)) +
+#   scale_x_continuous(breaks=(-4:4) * 45) +
+#   coord_map("ortho", orientation=c(-90, 0, 0)) +
+#   theme_bw()+
+#   theme(axis.text = element_blank(),
+#         axis.title = element_blank(),
+#         axis.ticks=element_blank(),
+#         panel.border = element_blank()) +
+#   
+#   geom_point(data = colony_estimates,aes(col = Ndiff_q500 > 0,group=1, size = abs(Ndiff_q500)), alpha = 0.5)+
+#   #geom_label_repel(data = colony_estimates,aes(col = trend_q500,group=1, label = site_id))+
+#   scale_color_manual(values = c("red","blue"), labels = c("Decrease","Increase"), name = "Direction of Change",na.translate = FALSE)+
+#   scale_size_continuous(name = "Change in abundance")
+# print(change_map)
+# 
+# pdf(file = "output_empirical/FigX_change_map.pdf", width = 8, height = 8)
+# print(change_map)
+# dev.off()
 
 #----------------------------------------------------------
 # Observed global dynamics
@@ -202,39 +176,65 @@ pc <- quantile(pc_sims,c(0.025,0.5,0.975)) %>% round(1)
 samples.to.plot <- round(seq(1,max(N_global_df$mcmc_sample),length.out = 3000))
 tmp <- subset(N_global_df, mcmc_sample %in% samples.to.plot)
 
-# Assuming EMPE have a generation time of 15 years, 
-# the log-linear trend that would result in a 30% population decline over 3 generations (45 years, 44 time steps) is:
-# log(0.7)/(GT*3 - 1) = log(0.7)/44
-
+# Assuming EMPE have a generation time of 12 years, 
+# the log-linear trend that would result in a 30% population decline over 3 generations is:
+# log(0.7)/(GT*3 - 1)
 GT <- 12
 P_endangered = mean(gt_sims <= log(0.5)/(GT*3-1)) %>% round(2)
 P_threatened = mean(gt_sims <= log(0.7)/(GT*3-1)) %>% round(2)
 
-plot_global_observed <- ggplot()+
+plot_global_dynamics <- ggplot()+
   
   # Individual lines for each mcmc sample
-  geom_line(data = tmp,aes(x = Year, y = N, col = factor(mcmc_sample)), alpha = 0.02)+
-  scale_color_manual(values = rep("blue",length(unique(tmp$mcmc_sample))), guide = FALSE)+
+  geom_line(data = tmp,aes(x = Year, y = N, col = factor(mcmc_sample)), size = 0.2, alpha = 0.015)+
+  scale_color_manual(values = rep("blue",length(unique(tmp$mcmc_sample))), guide = "none")+
   
   # Quantiles
   geom_line(data = N_global_summary, aes(x = Year, y = N_q025), linetype = 2)+
   geom_line(data = N_global_summary, aes(x = Year, y = N_q975), linetype = 2)+
   geom_line(data = N_global_summary, aes(x = Year, y = N_q500))+
   
-  ylab("Global index of abundance")+
+  ylab("Index of abundance")+
   xlab("Year")+
   ggtitle(paste0("2018 relative to 2009: ", pc[2],"% (95% CRI: ",pc[1],"% to ",pc[3],"%)\nLog-linear slope: ",gt[2]," (95% CRI: ",gt[1]," to ",gt[3],")\nProb. is slope consistent with 'Threatened' status: ",P_threatened,"\nProb. is slope consistent with 'Endangered' status: ",P_endangered))+
-  coord_cartesian(ylim=c(min(N_global_summary$N_q025), max(N_global_summary$N_q975)))+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+  scale_y_continuous(limits=c(0, max(N_global_df$N)), labels = comma) +
+  theme_few()
 
 pdf(file = "output_empirical/Fig3_global_dynamics.pdf", width = 6, height = 4)
-print(plot_global_observed)
+print(plot_global_dynamics)
 dev.off()
 
 #----------------------------------------------------------
 # Group sites together (e.g., by sea ice region and plot dynamics)
 #----------------------------------------------------------
 
-dim(out$sims.list$N)
+N_ice_reg <- N_samples %>% 
+  left_join(colony_attributes) %>%
+  group_by(ice_reg,mcmc_sample,year) %>%
+  summarize(N = sum(N)) %>%
+  group_by(ice_reg, year) %>%
+  summarize(N_q025 = quantile(N,0.025),
+            N_q500 = quantile(N,0.500),
+            N_q975 = quantile(N,0.975))
+  
 
+nice_palette <- c("#016B9B","#84C5E4","#FFD146","#3D9946","#ED9484","#AF5DA4","#D6D8D8","#76C044","#07703B","#CCB776")
+region_colors <- nice_palette[1:length(unique(N_ice_reg$ice_reg))]
+plot_regional_dynamics <- ggplot(N_ice_reg, aes(x = year, ymin = N_q025, ymax = N_q975, y = N_q500, col = ice_reg, fill = ice_reg))+
+  
+  # Individual lines for each mcmc sample
+  geom_ribbon(alpha = 0.5, col = "transparent")+
+  geom_line(size=1)+
+  geom_point(aes(x = 2010,y=0), col = "transparent")+
+
+  scale_color_manual(values = region_colors, guide = "none")+
+  scale_fill_manual(values = region_colors, guide = "none")+
+  
+  ylab("Index of abundance")+
+  xlab("Year")+
+  theme_few()+
+  facet_wrap(ice_reg~., scales = "free_y")
+
+pdf(file = "output_empirical/Fig4_regional_dynamics.pdf", width = 8, height = 6)
+print(plot_regional_dynamics)
+dev.off()
