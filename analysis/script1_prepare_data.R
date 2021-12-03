@@ -1,6 +1,6 @@
 # install/load necessary packages
 my.packs <- c('jagsUI',"ggplot2",'reshape2','scales','tidyverse',
-              'rgeos','raster','sp','sf','ggrepel')
+              'rgeos','raster','sp','sf','ggrepel','ggthemes')
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
@@ -11,7 +11,7 @@ rm(list=ls())
 year_range <- 2009:2018
 
 # Read in EMPE satellite data
-sat <- read.csv("../../data/empe_satellite.csv") # Previously satellite.csv
+sat <- read.csv("../data/empe_satellite.csv") # Previously satellite.csv
 sat$site_id <- as.character(sat$site_id)
 sat$area_m2 <- as.numeric(sat$area_m2)
 sat <- subset(sat, !is.na(area_m2))
@@ -20,7 +20,7 @@ sat$bpresent[which(sat$bpresent == "NA")] <- NA
 sat <- subset(sat,img_year %in% year_range)
 
 # Read in EMPE aerial data
-aer <- read.csv("../../data/empe_aerial.csv")
+aer <- read.csv("../data/empe_aerial.csv")
 aer_adults <- subset(aer, count_type == "adults")
 aer_adults$site_id <- as.character(aer_adults$site_id)
 colnames(aer_adults)[which(colnames(aer_adults) == "penguin_count")] <- "adult_count"
@@ -78,41 +78,6 @@ p1 <- ggplot() +
 pdf("output_empirical/Fig1_data.pdf", width = 6, height = n_sites*0.8)
 print(p1)
 dev.off()
-
-#---------------------------------------------------------------------
-# Specify colony occupancy state when this is known 
-#---------------------------------------------------------------------
-
-# data$z_known <- factor(data$bpresent,levels = c("no","yes")) %>% as.numeric()
-# data$z_known <- data$z_known - 1
-# 
-# z_known <- matrix(NA,ncol = max(data$year_number), nrow = max(data$site_number))
-# for (i in 1:nrow(data)){
-#   
-#   col <- data$year_number[i]
-#   row <- data$site_number[i]
-#   
-#   if (!is.na(data$z_known[i])){
-#     if (z_known[row,col] != data$z_known[i] & !is.na(z_known[row,col])){
-#       print(paste0("Discrepancy in occupancy on row ",i))
-#     }
-#     z_known[row,col] <- data$z_known[i]
-#   }
-# }
-# 
-# # Determine z indices that need to be estimated
-# z_ind <- z_known %>% 
-#   reshape2::melt() %>%
-#   rename(site_number = Var1, year_number = Var2, z = value) %>%
-#   subset(is.na(z))
-# 
-# # Initial values for JAGS
-# z_init <- z_known
-# z_init[!is.na(z_init)] <- 3
-# z_init[is.na(z_init)] <- 1
-# z_init[z_init == 3] <- NA
-
-#---------------------------------------------------------------------
 
 #Package data for JAGS
 jags.data <- list( n_years = n_years,

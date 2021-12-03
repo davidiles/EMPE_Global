@@ -208,7 +208,7 @@ dev.off()
 # Group sites together (e.g., by sea ice region and plot dynamics)
 #----------------------------------------------------------
 
-N_ice_reg <- N_samples %>% 
+N_ice_reg_1 <- N_samples %>% 
   left_join(colony_attributes) %>%
   group_by(ice_reg,mcmc_sample,year) %>%
   summarize(N = sum(N)) %>%
@@ -219,8 +219,8 @@ N_ice_reg <- N_samples %>%
   
 
 nice_palette <- c("#016B9B","#84C5E4","#FFD146","#3D9946","#ED9484","#AF5DA4","#D6D8D8","#76C044","#07703B","#CCB776")
-region_colors <- nice_palette[1:length(unique(N_ice_reg$ice_reg))]
-plot_regional_dynamics <- ggplot(N_ice_reg, aes(x = year, ymin = N_q025, ymax = N_q975, y = N_q500, col = ice_reg, fill = ice_reg))+
+region_colors <- nice_palette[1:length(unique(N_ice_reg_1$ice_reg))]
+plot_regional_dynamics_1 <- ggplot(N_ice_reg_1, aes(x = year, ymin = N_q025, ymax = N_q975, y = N_q500, col = ice_reg, fill = ice_reg))+
   
   # Individual lines for each mcmc sample
   geom_ribbon(alpha = 0.5, col = "transparent")+
@@ -235,6 +235,41 @@ plot_regional_dynamics <- ggplot(N_ice_reg, aes(x = year, ymin = N_q025, ymax = 
   theme_few()+
   facet_wrap(ice_reg~., scales = "free_y")
 
-pdf(file = "output_empirical/Fig4_regional_dynamics.pdf", width = 8, height = 6)
-print(plot_regional_dynamics)
+pdf(file = "output_empirical/Fig4_regional_dynamics_1.pdf", width = 8, height = 6)
+print(plot_regional_dynamics_1)
+dev.off()
+
+#----------------------------------------------------------
+# Group sites together (e.g., by sea ice region and plot dynamics)
+#----------------------------------------------------------
+
+N_ice_reg_2 <- N_samples %>% 
+  left_join(colony_attributes) %>%
+  group_by(p_ice_reg,mcmc_sample,year) %>%
+  summarize(N = sum(N)) %>%
+  group_by(p_ice_reg, year) %>%
+  summarize(N_q025 = quantile(N,0.025),
+            N_q500 = quantile(N,0.500),
+            N_q975 = quantile(N,0.975))
+
+
+nice_palette <- c("#016B9B","#84C5E4","#FFD146","#3D9946","#ED9484","#AF5DA4","#D6D8D8","#76C044","#07703B","#CCB776")
+region_colors <- nice_palette[1:length(unique(N_ice_reg_2$p_ice_reg))]
+plot_regional_dynamics_2 <- ggplot(N_ice_reg_2, aes(x = year, ymin = N_q025, ymax = N_q975, y = N_q500, col = p_ice_reg, fill = p_ice_reg))+
+  
+  # Individual lines for each mcmc sample
+  geom_ribbon(alpha = 0.5, col = "transparent")+
+  geom_line(size=1)+
+  geom_point(aes(x = 2010,y=0), col = "transparent")+
+  
+  scale_color_manual(values = region_colors, guide = "none")+
+  scale_fill_manual(values = region_colors, guide = "none")+
+  
+  ylab("Index of abundance")+
+  xlab("Year")+
+  theme_few()+
+  facet_wrap(p_ice_reg~., scales = "free_y")
+
+pdf(file = "output_empirical/Fig4_regional_dynamics_2.pdf", width = 8, height = 6)
+print(plot_regional_dynamics_2)
 dev.off()

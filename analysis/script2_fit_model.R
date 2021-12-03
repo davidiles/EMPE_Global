@@ -15,9 +15,9 @@ sink("EMPE_model_empirical.jags")
 cat("
     model {
   
-  ###############################
+  # ------------------------------------
   # Population process model
-  ###############################
+  # ------------------------------------
   
   # Occupancy state in each year, at each colony
   prob_occ ~ dunif(0,1)
@@ -55,9 +55,9 @@ cat("
     }
   } 
   
-  ###############################
+  # ------------------------------------
   # Aerial observation model
-  ###############################
+  # ------------------------------------
   
   aerial_sigma ~ dunif(0,2) 
   aerial_tau <- pow(aerial_sigma,-2)
@@ -68,9 +68,9 @@ cat("
     log_lambda[i] ~ dnorm(log_X[aerial_site[i],aerial_year[i]] - 1/(2*aerial_tau), aerial_tau)
     adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * exp(log_lambda[i]))
     
-    #------------------------------------
+    # ------------------------------------
     # FOR POSTERIOR PREDICTIVE CHECK
-    #------------------------------------
+    # ------------------------------------
     sim_log_lambda[i] ~ dnorm(log_X[aerial_site[i],aerial_year[i]] - 1/(2*aerial_tau), aerial_tau)
     sim_adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * exp(sim_log_lambda[i]))
     
@@ -80,12 +80,11 @@ cat("
     # Discrepancy measures
     sqE_adult_count_actual[i] <- pow(adult_count[i] - expected_adult_count[i],2)
     sqE_adult_count_sim[i] <- pow(sim_adult_count[i] - expected_adult_count[i],2)
-    #------------------------------------
   }
   
-  ###############################
+  # ------------------------------------
   # Satellite observation model
-  ###############################
+  # ------------------------------------
   
   # Describes proportional bias and variance in satellite counts
   sat_CV ~ dunif(0,1)
@@ -96,7 +95,7 @@ cat("
     
     # Observation error (and bias) for satellite counts is estimated from data
     sat_mean[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope 
-    sat_sd[i] <- sat_mean[i] * sat_CV + 0.001
+    sat_sd[i] <- sat_mean[i] * sat_CV + 0.001 # Tiny constant ensures tau is defined when sat_mean is zero
     sat_tau[i] <- pow(sat_sd[i],-2)
     
     sat_z[i] ~ dbern(sat_p)
@@ -116,9 +115,9 @@ cat("
     #------------------------------------
   }
   
-  ###############################
+  # ------------------------------------
   # Derived quantities
-  ###############################
+  # ------------------------------------
   
   # Global abundance each year
   for (t in 1:n_years){
@@ -127,6 +126,10 @@ cat("
   
   # Global trend (measured as least squares regression slope on log scale)
   global_trend <- inprod(log(N_global[1:n_years]),regression_weights[1,1:n_years])
+  
+  #------------------------------------
+  # FOR POSTERIOR PREDICTIVE CHECK 
+  #------------------------------------
   
   # Root mean squared error of empirical data
   RMSE_adult_count_actual <- sqrt(mean(sqE_adult_count_actual[]))
