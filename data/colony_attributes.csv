@@ -1,0 +1,55 @@
+site_id,site_name,lat,lon,polynya,ccamlr_reg,ice_reg,p_ice_reg
+AMAN,Amanda Bay,-69.27,76.83,Prydz Bay,Division 58.4.2,East Indian Ocean,Indian
+AMUN,Amundsen Bay,-66.78,50.55,Amundsen Bay,Division 58.4.2,West Indian Ocean,Indian
+ASTD,Astrid,-69.95,8.31,West Lazarev Sea,Subarea 48.6,Dronning Maud Land,Weddell
+ATKA,Atka,-70.61,-8.13,Maudheim,Subarea 48.6,Dronning Maud Land,Weddell
+AUST,Auster,-67.39,63.98,Utstikkar Bay,Division 58.4.2,West Indian Ocean,Indian
+BARR,Barrier Bay,-67.22,81.92,West Ice Shelf,Division 58.4.1,East Indian Ocean,Indian
+BEAR,Bear Peninsula,-74.35,-110.25,Amundsen Sea,Subarea 88.2,Amundsen Sea,Bell-Amundsen
+BEAU,Beaufort Island,-76.94,167.02,Ross Sea,Subarea 88.1,Victoria Oates Land,Ross
+BOWM,Bowman Island,-65.16,103.07,Shackleton Ice Shelf,Division 58.4.1,Australia,Pacific
+BRYAN,Bryan Coast,-73.246649,-85.353244,Eltanin Bay,Subarea 88.3,Bellingshausen Sea,Bell-Amundsen
+BSON,Brownson Islands,-74.35,-103.64,Pine Island Bay,Subarea 88.3,Amundsen Sea,Bell-Amundsen
+BUIS,Burton Ice Shelf,-66.14,89.69,Davis Sea,Division 58.4.1,East Indian Ocean,Indian
+CBEK,Cape Colbeck,-77.135,-157.715,Sulzberger Bay,Subarea 88.2,Amundsen Sea,Ross
+COUL,Coulman Island,-73.35,169.61,Ross Sea,Subarea 88.1,Victoria Oates Land,Ross
+CROZ,Cape Crozier,-77.46,169.32,Ross Sea,Subarea 88.1,Victoria Oates Land,Ross
+DARN,Cape Darnley,-67.88,69.7,Mackenzie Bay,Division 58.4.2,West Indian Ocean,Indian
+DAWS,Dawson,-76.02,-26.67,Halley Bay,Subarea 48.5,Weddell Sea,Weddell
+DBAY,Davis Bay,-69.35,158.49,Ninnis Glacier,Subarea 88.1,Victoria Oates Land,Pacific
+DIBB,Dibble Glacier,-66.01,134.79,Davis Bay,Division 58.4.1,Australia,Pacific
+DION,Dion Islands,-67.9,-68.7,Marguerite Bay,Subarea 48.1,Bellingshausen Sea,Bell-Amundsen
+DOLL,Dolleman,-70.61,-60.43,Larsen Ice Shelf,Subarea 48.5,Bellingshausen Sea,Weddell
+DRES,Drescher,-72.83,-19.34,Lyddan Island,Subarea 48.6,Weddell Sea,Weddell
+FOLD,Fold Island,-67.32,59.32,Utstikkar Bay,Division 58.4.2,West Indian Ocean,Indian
+FRAN,Franklin Island,-76.18,168.43,Ross Sea,Subarea 88.1,Victoria Oates Land,Ross
+GOUL,Gould,-77.71,-47.68,Ronne Ice Shelf,Subarea 48.5,Weddell Sea,Weddell
+GUNN,Gunnerus,-68.75,34.38,Lutzholhm Bay,Division 58.4.2,West Indian Ocean,Indian
+HALY,Halley,-75.54,-27.43,Halley Bay,Subarea 48.5,Weddell Sea,Weddell
+HASW,Haswell Island,-66.52,93.01,Davis Sea,Division 58.4.1,East Indian Ocean,Pacific
+JASON,Jason,-66.100236,-60.668903,Larsen Ice Shelf,Subarea 48.5,Bellingshausen Sea,Weddell
+KLOA,Kloa Point,-66.64,57.28,Cape Borle,Division 58.4.2,West Indian Ocean,Indian
+LAZA,Lazarev,-69.75,15.55,East Lazarev Sea,Subarea 48.6,Dronning Maud Land,Weddell
+LEDD,Ledda Bay,-74.228,-130.784,Wrigley Gulf,Subarea 88.2,Amundsen Sea,Bell-Amundsen
+LUIT,Luitpold,-77.269,-33.54,Halley Bay,Subarea 48.5,Weddell Sea,Weddell
+MERT,Mertz Glacier,-67.23,145.516,Ninnis Glacier,Division 58.4.1,Australia,Pacific
+NOVI,Noville Peninsula,-71.77,-98.45,Pine Island Bay,Subarea 88.3,Bellingshausen Sea,Bell-Amundsen
+PGEO,Point Geologie,-66.67,140.01,Dumont Durville,Division 58.4.1,Australia,Pacific
+PSON,Peterson Bank,-65.92,110.23,Vincennes Bay,Division 58.4.1,Australia,Pacific
+RAGN,Ragnhild,-69.9,27.15,Breid Bay,Subarea 48.6,West Indian Ocean,Indian
+RIIS,Riiser,-72.12,-15.11,Maudheim,Subarea 48.6,Dronning Maud Land,Weddell
+ROGE,Cape Roget,-71.99,170.59,Ross Sea,Subarea 88.1,Victoria Oates Land,Ross
+ROTH,Rothschild,-69.518,-72.265,Marguerite Bay,Subarea 88.3,Bellingshausen Sea,Bell-Amundsen
+RUPE,Rupert Coast,-75.38,-143.3,Hull Bay,Subarea 88.2,Amundsen Sea,Ross
+SANA,Sanae,-70.03,-1.34,Jelbart Ice Shelf,Subarea 48.6,Dronning Maud Land,Weddell
+SCST,Sabrina Coast,-66.175,121.018,Henry Bay,Division 58.4.1,Australia,Pacific
+SHAC,Shackleton Ice Shelf,-64.86,96.02,Davis Sea,Division 58.4.1,East Indian Ocean,Pacific
+SMTH,Smith,-74.37,-60.83,Ronne Ice Shelf,Subarea 48.5,Bellingshausen Sea,Weddell
+SMYL,Smyley,-72.3,-78.83,Eltanin Bay,Subarea 88.3,Bellingshausen Sea,Bell-Amundsen
+SNOW,Snowhill,-64.52,-57.44,Larsen Ice Shelf,Subarea 48.1,Weddell Sea,Weddell
+STCB,Stancomb,-74.12,-23.09,Lyddan Island,Subarea 48.5,Weddell Sea,Weddell
+TAYG,Taylor Glacier,-67.45,60.88,Utstikkar Bay,Division 58.4.2,West Indian Ocean,Indian
+THUR,Thurston Glacier,-73.5,-125.621,Wrigley Gulf,Subarea 88.2,Amundsen Sea,Bell-Amundsen
+UMBE,Umbeashi,-68.05,43.01,Lutzholhm Bay,Division 58.4.2,West Indian Ocean,Indian
+WASH,Cape Washington,-74.64,165.37,Ross Sea,Subarea 88.1,Victoria Oates Land,Ross
+WISH,West Ice Shelf,-66.33,81.47,West Ice Shelf,Division 58.4.1,East Indian Ocean,Indian
