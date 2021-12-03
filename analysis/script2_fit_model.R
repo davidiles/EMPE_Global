@@ -125,13 +125,8 @@ cat("
     N_global[t] <- sum(N[1:n_sites,t])
   }
   
-  # Global trend
+  # Global trend (measured as least squares regression slope on log scale)
   global_trend <- inprod(log(N_global[1:n_years]),regression_weights[1,1:n_years])
-  
-  # Site-level trends
-  for (s in 1:n_sites){
-    site_trend[s] <- inprod(log(N[s, 1:n_years] + 1),regression_weights[1,1:n_years])
-  }
   
   # Root mean squared error of empirical data
   RMSE_adult_count_actual <- sqrt(mean(sqE_adult_count_actual[]))
