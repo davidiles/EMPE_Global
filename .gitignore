@@ -3,3 +3,4 @@
 *.RData
 *.ini
 analysis/.Rhistory
+analysis/script4_simulation.R
