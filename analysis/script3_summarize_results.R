@@ -118,31 +118,6 @@ dev.off()
 # pdf(file = "output_empirical/FigX_trend_2D.pdf", width = 8, height = 4)
 # print(trend_2D )
 # dev.off()
-# 
-# #----------------------------------------------------------
-# # Map of change (2018 relative to 2009)
-# #----------------------------------------------------------
-# lim <- max(abs(colony_estimates$Ndiff_q500),na.rm = TRUE)
-# change_map <- ggplot(world, aes(x=long, y=lat, group=group)) +
-#   geom_polygon(fill = "gray95", col = "gray55",alpha=0.5) +
-#   scale_y_continuous(breaks=(-2:2) * 30, limits = c(-90,-60)) +
-#   scale_x_continuous(breaks=(-4:4) * 45) +
-#   coord_map("ortho", orientation=c(-90, 0, 0)) +
-#   theme_bw()+
-#   theme(axis.text = element_blank(),
-#         axis.title = element_blank(),
-#         axis.ticks=element_blank(),
-#         panel.border = element_blank()) +
-#   
-#   geom_point(data = colony_estimates,aes(col = Ndiff_q500 > 0,group=1, size = abs(Ndiff_q500)), alpha = 0.5)+
-#   #geom_label_repel(data = colony_estimates,aes(col = trend_q500,group=1, label = site_id))+
-#   scale_color_manual(values = c("red","blue"), labels = c("Decrease","Increase"), name = "Direction of Change",na.translate = FALSE)+
-#   scale_size_continuous(name = "Change in abundance")
-# print(change_map)
-# 
-# pdf(file = "output_empirical/FigX_change_map.pdf", width = 8, height = 8)
-# print(change_map)
-# dev.off()
 
 #----------------------------------------------------------
 # Observed global dynamics
@@ -235,8 +210,25 @@ plot_regional_dynamics_1 <- ggplot(N_ice_reg_1, aes(x = year, ymin = N_q025, yma
   theme_few()+
   facet_wrap(ice_reg~., scales = "free_y")
 
-pdf(file = "output_empirical/Fig4_regional_dynamics_1.pdf", width = 8, height = 6)
-print(plot_regional_dynamics_1)
+world <- map_data("world")
+map_1 <- ggplot(world, aes(x=long, y=lat, group=group)) +
+  geom_polygon(fill = "gray95", col = "gray55",alpha=0.5) +
+  scale_y_continuous(breaks=(-2:2) * 30, limits = c(-90,-60)) +
+  scale_x_continuous(breaks=(-4:4) * 45) +
+  coord_map("ortho", orientation=c(-90, 0, 0)) +
+  theme_bw()+
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks=element_blank(),
+        panel.border = element_blank()) +
+  
+  geom_point(data = colony_attributes,aes(x = lon, y = lat, col = ice_reg,group=1))+
+  geom_label_repel(data = colony_attributes,aes(x = lon, y = lat, col = ice_reg,group=1, label = site_id))+
+  scale_color_manual(values = region_colors, name = "Sea ice region",na.translate = FALSE)
+
+combined_plot_1 <- cowplot::plot_grid(map_1, plot_regional_dynamics_1, nrow = 2)
+pdf(file = "output_empirical/Fig5_map_region_dynamics_1.pdf", width = 12, height = 12)
+print(combined_plot_1)
 dev.off()
 
 #----------------------------------------------------------
@@ -267,9 +259,115 @@ plot_regional_dynamics_2 <- ggplot(N_ice_reg_2, aes(x = year, ymin = N_q025, yma
   
   ylab("Index of abundance")+
   xlab("Year")+
+  scale_y_continuous(labels = comma) +
   theme_few()+
   facet_wrap(p_ice_reg~., scales = "free_y")
 
-pdf(file = "output_empirical/Fig4_regional_dynamics_2.pdf", width = 8, height = 6)
-print(plot_regional_dynamics_2)
+world <- map_data("world")
+map_2 <- ggplot(world, aes(x=long, y=lat, group=group)) +
+  geom_polygon(fill = "gray95", col = "gray55",alpha=0.5) +
+  scale_y_continuous(breaks=(-2:2) * 30, limits = c(-90,-60)) +
+  scale_x_continuous(breaks=(-4:4) * 45) +
+  coord_map("ortho", orientation=c(-90, 0, 0)) +
+  theme_bw()+
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks=element_blank(),
+        panel.border = element_blank()) +
+  
+  geom_point(data = colony_attributes,aes(x = lon, y = lat, col = p_ice_reg,group=1))+
+  geom_label_repel(data = colony_attributes,aes(x = lon, y = lat, col = p_ice_reg,group=1, label = site_id))+
+  scale_color_manual(values = region_colors, name = "Sea ice region",na.translate = FALSE)
+
+combined_plot_2 <- cowplot::plot_grid(map_2, plot_regional_dynamics_2, nrow = 2)
+pdf(file = "output_empirical/Fig5_map_region_dynamics_2.pdf", width = 12, height = 12)
+print(combined_plot_2)
+dev.off()
+
+#----------------------------------------------------------
+# Group sites together (e.g., by sea ice region and plot dynamics)
+#----------------------------------------------------------
+
+N_ice_reg_3 <- N_samples %>% 
+  left_join(colony_attributes) %>%
+  group_by(Genetic.name,mcmc_sample,year) %>%
+  summarize(N = sum(N)) %>%
+  group_by(Genetic.name, year) %>%
+  summarize(N_q025 = quantile(N,0.025),
+            N_q500 = quantile(N,0.500),
+            N_q975 = quantile(N,0.975))
+
+
+nice_palette <- c("#016B9B","#84C5E4","#FFD146","#3D9946","#ED9484","#AF5DA4","#D6D8D8","#76C044","#07703B","#CCB776")
+region_colors <- nice_palette[1:length(unique(N_ice_reg_3$Genetic.name))]
+plot_regional_dynamics_3 <- ggplot(N_ice_reg_3, aes(x = year, ymin = N_q025, ymax = N_q975, y = N_q500, col = Genetic.name, fill = Genetic.name))+
+  
+  # Individual lines for each mcmc sample
+  geom_ribbon(alpha = 0.5, col = "transparent")+
+  geom_line(size=1)+
+  geom_point(aes(x = 2010,y=0), col = "transparent")+
+  
+  scale_color_manual(values = region_colors, guide = "none")+
+  scale_fill_manual(values = region_colors, guide = "none")+
+  
+  ylab("Index of abundance")+
+  xlab("Year")+
+  scale_y_continuous(labels = comma) +
+  theme_few()+
+  facet_wrap(Genetic.name~., scales = "free_y")
+
+world <- map_data("world")
+map_3 <- ggplot(world, aes(x=long, y=lat, group=group)) +
+  geom_polygon(fill = "gray95", col = "gray55",alpha=0.5) +
+  scale_y_continuous(breaks=(-2:2) * 30, limits = c(-90,-60)) +
+  scale_x_continuous(breaks=(-4:4) * 45) +
+  coord_map("ortho", orientation=c(-90, 0, 0)) +
+  theme_bw()+
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks=element_blank(),
+        panel.border = element_blank()) +
+  
+  geom_point(data = colony_attributes,aes(x = lon, y = lat, col = Genetic.name,group=1))+
+  geom_label_repel(data = colony_attributes,aes(x = lon, y = lat, col = Genetic.name,group=1, label = site_id))+
+  scale_color_manual(values = region_colors, name = "Genetic region",na.translate = FALSE)
+
+combined_plot_3 <- cowplot::plot_grid(map_3, plot_regional_dynamics_3, nrow = 2)
+pdf(file = "output_empirical/Fig5_map_region_dynamics_3.pdf", width = 12, height = 12)
+print(combined_plot_3)
+dev.off()
+
+#----------------------------------------------------------
+# Group sites together by CCAMLR region
+#----------------------------------------------------------
+
+N_ccamlr_reg <- N_samples %>% 
+  left_join(colony_attributes) %>%
+  group_by(ccamlr_reg,mcmc_sample,year) %>%
+  summarize(N = sum(N)) %>%
+  group_by(ccamlr_reg, year) %>%
+  summarize(N_q025 = quantile(N,0.025),
+            N_q500 = quantile(N,0.500),
+            N_q975 = quantile(N,0.975))
+
+
+nice_palette <- c("#016B9B","#84C5E4","#FFD146","#3D9946","#ED9484","#AF5DA4","#D6D8D8","#76C044","#07703B","#CCB776")
+region_colors <- nice_palette[1:length(unique(N_ccamlr_reg$ccamlr_reg))]
+plot_ccamlr_dynamics <- ggplot(N_ccamlr_reg, aes(x = year, ymin = N_q025, ymax = N_q975, y = N_q500, col = ccamlr_reg, fill = ccamlr_reg))+
+  
+  # Individual lines for each mcmc sample
+  geom_ribbon(alpha = 0.5, col = "transparent")+
+  geom_line(size=1)+
+  geom_point(aes(x = 2010,y=0), col = "transparent")+
+  
+  scale_color_manual(values = region_colors, guide = "none")+
+  scale_fill_manual(values = region_colors, guide = "none")+
+  
+  ylab("Index of abundance")+
+  xlab("Year")+
+  theme_few()+
+  facet_wrap(ccamlr_reg~., scales = "free_y")
+
+pdf(file = "output_empirical/Fig4_ccamlr_dynamics.pdf", width = 8, height = 6)
+print(plot_ccamlr_dynamics)
 dev.off()

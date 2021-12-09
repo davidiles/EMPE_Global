@@ -50,7 +50,7 @@ aer_adults$year_number <- match(aer_adults$year,years)
 sat$site_number <- match(sat$site_id,sites)
 sat$year_number <- match(sat$img_year,years)
 
-colony_attributes <- read.csv("../../data/colony_attributes.csv") %>% left_join(data.frame(site_number = 1:length(sites), site_id = sites))
+colony_attributes <- read.csv("../data/colony_attributes.csv") %>% left_join(data.frame(site_number = 1:length(sites), site_id = sites))
 sat <- left_join(sat, colony_attributes) %>% mutate(site_id = fct_reorder(site_id, lon)) 
 aer_adults <- left_join(aer_adults, colony_attributes) %>% mutate(site_id = fct_reorder(site_id, lon)) 
 
