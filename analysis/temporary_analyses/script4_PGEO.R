@@ -16,6 +16,11 @@ load(file = "output_empirical/EMPE_out.RData")    # Fitted model
 subset(colony_attributes, !(site_id %in% sites)) # Sites not included in analysis
 
 #----------------------------------------------------------
+# Load counts of breeding adults and reproductive success at PGEO
+#----------------------------------------------------------
+pgeo_dat <- read.csv("../data/empe_PGEO_data.csv") # ground data at PGEO
+
+#----------------------------------------------------------
 # Convert mcmc samples to dataframe
 #----------------------------------------------------------
 
@@ -36,56 +41,123 @@ colony_estimates <- N_samples %>%
   left_join(., colony_attributes)
 colony_estimates$site_id <- fct_reorder(colony_estimates$site_id, colony_estimates$lon)
 
-p2 = ggplot(data = colony_estimates) +
+#----------------------------------------------------------
+# Restrict to PGEO
+#----------------------------------------------------------
+
+# model estimates restricted to PGEO
+pgeo_est <- subset(colony_estimates, site_id == "PGEO")
+
+# breeding pair counts at PGEO (and repro success)
+pgeo_dat <- subset(pgeo_dat, Year >= 2009) %>%
+  rename(Breeding_Success = 4, Breeding_Pairs = 5) %>%
+  mutate(BPxBS = Breeding_Success * Breeding_Pairs)
+
+# summarize weekly ground counts (from Celine) by mean and 1.96*SE
+pgeo_weekly <- subset(aer_adults, site_id == "PGEO") %>%
+  group_by(year) %>%
+  summarize(mean_count = mean(adult_count),
+            sd_count = sd(adult_count),
+            n_count = n(),
+            se_count = sd(adult_count)/sqrt(n()),
+            lcl_count = mean(adult_count) - 1.96*sd(adult_count)/sqrt(n()),
+            ucl_count = mean(adult_count) + 1.96*sd(adult_count)/sqrt(n()))
+
+p1 = ggplot(data = pgeo_est) +
+  
+  # Estimates from Bayesian model
   geom_line(aes(x = year, y = N_q500), col = "dodgerblue")+
-  geom_line(aes(x = year, y = N_q025), col = "dodgerblue", linetype = 3)+
-  geom_line(aes(x = year, y = N_q975), col = "dodgerblue", linetype = 3)+
+  geom_ribbon(aes(x = year, ymin = N_q025, ymax = N_q975), fill = "dodgerblue", alpha = 0.2)+
+
+  # Satellite counts
+  geom_point(data = subset(sat, site_id == "PGEO"), aes(x = img_year, y = area_m2, shape = "Satellite count"))+
   
-  geom_point(data = sat, aes(x = img_year, y = area_m2, shape = "Satellite count"))+
-  geom_point(data = aer_adults, aes(x = year, y = adult_count, shape = "Aerial count (adult)"))+
-  geom_point(aes(x = 2010,y=0), col = "transparent")+
+  # Mean of weekly ground counts from Celine
+  geom_point(data =  pgeo_weekly, aes(x = year, y = mean_count, shape = "Mean Sep-Nov ground count (Celine)"))+
   
-  scale_shape_manual(name = 'Obs type', values =c('Satellite count'=4,'Aerial count (adult)'= 19))+
+  # Breeding Pair counts
+  #geom_point(data =  pgeo_dat, aes(x = Year, y = Breeding_Pairs, shape = "Breeding Pairs"))+
+  
+  # Breeding Pairs x RS
+  #geom_point(data =  pgeo_dat, aes(x = Year, y = BPxBS, shape = "Breeding Pairs x Breeding Success"))+
+  
+  scale_shape_manual(name = '', values =c('Mean Sep-Nov ground count (Celine)'= 19,'Satellite count'=4))+
   
   ylab("Count")+
   xlab("Year")+
-  facet_grid(site_id~., scales = "free_y")+
   scale_x_continuous(breaks = years, minor_breaks = NULL)+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
-  theme_few()
+  theme_few()+
+  theme(legend.position="top",
+        legend.background = element_blank(),
+        legend.box.background = element_rect(colour = "black"))
+p1
 
-pdf(file = "output_empirical/Fig2_colony_dynamics.pdf", width = 6, height = n_sites*0.8)
-print(p2)
-dev.off()
+p2 = ggplot(data = pgeo_est) +
+  
+  # Estimates from Bayesian model
+  geom_line(aes(x = year, y = N_q500), col = "dodgerblue")+
+  geom_ribbon(aes(x = year, ymin = N_q025, ymax = N_q975), fill = "dodgerblue", alpha = 0.2)+
+  
+  # Satellite counts
+  #geom_point(data = subset(sat, site_id == "PGEO"), aes(x = img_year, y = area_m2, shape = "Satellite count"))+
+  
+  # Mean of weekly ground counts from Celine
+  #geom_point(data =  pgeo_weekly, aes(x = year, y = mean_count, shape = "Mean Sep-Nov ground count (Celine)"))+
+  
+  # Breeding Pair counts
+  geom_point(data =  pgeo_dat, aes(x = Year, y = Breeding_Pairs, shape = "Breeding Pairs"))+
+  geom_line(data =  pgeo_dat, aes(x = Year, y = Breeding_Pairs, shape = "Breeding Pairs"))+
+  
+  # Breeding Pairs x RS
+  geom_point(data =  pgeo_dat, aes(x = Year, y = BPxBS, shape = "Breeding Pairs x Breeding Success"))+
+  
+  scale_shape_manual(name = '', values =c('Breeding Pairs' = 11))+
+  
+  ylab("Count")+
+  xlab("Year")+
+  scale_x_continuous(breaks = years, minor_breaks = NULL)+
+  theme_few()+
+  theme(legend.position="top",
+        legend.background = element_blank(),
+        legend.box.background = element_rect(colour = "black"))
 
-# #----------------------------------------------------------
-# # Calculate trend (log-linear slope)
-# #----------------------------------------------------------
-# 
-# colony_trends <- out$sims.list$site_trend %>% 
-#   reshape2::melt() %>% 
-#   rename(mcmc_sample = Var1, site_number = Var2, trend = value) %>%
-#   group_by(site_number) %>%
-#   summarize(trend_q025 = quantile(trend,0.025),
-#             trend_q500 = quantile(trend,0.500),
-#             trend_q975 = quantile(trend,0.975)) %>%
-#   left_join(colony_attributes) %>%
-#   arrange(lon)
-# colony_trends$site_id <- fct_reorder(colony_trends$site_id, colony_trends$lon)
-# 
-# lim <- max(abs(colony_trends[,c("trend_q025","trend_q975")]),na.rm = TRUE)
-# trend_2D <- ggplot(colony_trends, aes(x=site_id, y = trend_q500, ymin = trend_q025, ymax = trend_q975)) +
-#   geom_hline(yintercept = 0, linetype = 2, col = "gray80")+
-#   geom_errorbar(width = 0)+
-#   geom_point()+
-#   theme_bw()+
-#   scale_x_discrete(guide = guide_axis(angle = 45))+
-#   coord_cartesian(ylim = c(-lim,lim))+
-#   ylab("Log-linear trend")+
-#   xlab("Site ID")
-# trend_2D
-# 
-# pdf(file = "output_empirical/FigX_trend_2D.pdf", width = 8, height = 4)
-# print(trend_2D )
-# dev.off()
+p2
 
+p3 = ggplot(data = pgeo_est) +
+  
+  # Estimates from Bayesian model
+  geom_line(aes(x = year, y = N_q500), col = "dodgerblue")+
+  geom_ribbon(aes(x = year, ymin = N_q025, ymax = N_q975), fill = "dodgerblue", alpha = 0.2)+
+  
+  # Satellite counts
+  #geom_point(data = subset(sat, site_id == "PGEO"), aes(x = img_year, y = area_m2, shape = "Satellite count"))+
+  
+  # Mean of weekly ground counts from Celine
+  #geom_point(data =  pgeo_weekly, aes(x = year, y = mean_count, shape = "Mean Sep-Nov ground count (Celine)"))+
+  
+  # Breeding Pair counts
+  #geom_point(data =  pgeo_dat, aes(x = Year, y = Breeding_Pairs, shape = "Breeding Pairs"))+
+  #geom_line(data =  pgeo_dat, aes(x = Year, y = Breeding_Pairs, shape = "Breeding Pairs"))+
+  
+  # Breeding Pairs x RS
+  geom_point(data =  pgeo_dat, aes(x = Year, y = BPxBS, shape = "Breeding Pairs x Breeding Success"))+
+  geom_line(data =  pgeo_dat, aes(x = Year, y = BPxBS, shape = "Breeding Pairs x Breeding Success"))+
+  
+  scale_shape_manual(name = '', values =c('Breeding Pairs x Breeding Success' = 14))+
+  
+  ylab("Count")+
+  xlab("Year")+
+  scale_x_continuous(breaks = years, minor_breaks = NULL)+
+  theme_few()+
+  theme(legend.position="top",
+        legend.background = element_blank(),
+        legend.box.background = element_rect(colour = "black"))
+
+p3
+
+N_samples %>%
+  group_by(site_number, year) %>%
+  summarize(N_q025 = quantile(N,0.025),
+            N_q500 = quantile(N,0.500),
+            N_q975 = quantile(N,0.975)) %>%
+  left_join(., colony_attributes)
