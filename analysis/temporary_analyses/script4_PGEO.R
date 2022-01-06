@@ -155,9 +155,29 @@ p3 = ggplot(data = pgeo_est) +
 
 p3
 
-N_samples %>%
-  group_by(site_number, year) %>%
-  summarize(N_q025 = quantile(N,0.025),
-            N_q500 = quantile(N,0.500),
-            N_q975 = quantile(N,0.975)) %>%
-  left_join(., colony_attributes)
+#----------------------------------------------------------
+# Calculate trend estimate
+#----------------------------------------------------------
+
+# Which colony is PGEO?
+pgeo_site <- subset(colony_attributes, site_id == "PGEO")$site_number
+
+pgeo_trend_est <- 100*((out$sims.list$N[,pgeo_site,jags.data$n_years-1]/out$sims.list$N[,pgeo_site,1])^(1/(jags.data$n_years-2))-1)
+pgeo_trend_true <- 100*((pgeo_dat$BPxBS[nrow(pgeo_dat)]/pgeo_dat$BPxBS[1])^(1/(nrow(pgeo_dat)-1))-1)
+
+quantile(pgeo_trend_est, c(0.025,0.5,0.975))
+
+p4 = ggplot() +
+  geom_vline(xintercept = 0, linetype = 2)+
+  geom_histogram(aes(x = pgeo_trend_est), fill = "dodgerblue", alpha = 0.5)+
+  
+  geom_vline(xintercept = median(pgeo_trend_est), col = "dodgerblue", size = 2)+
+  geom_vline(xintercept = median(pgeo_trend_est), col = "dodgerblue", size = 2)+
+  
+  xlab("PGEO trend estimate")+
+  ylab("freq")+
+  theme_few()
+
+p4
+
+mean(pgeo_trend_est < pgeo_trend_true)
