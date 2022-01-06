@@ -1,10 +1,10 @@
 # install/load necessary packages
 my.packs <- c('jagsUI',"ggplot2",'reshape2','scales','tidyverse',
-              'rgeos','raster','sp','sf','ggrepel','ggthemes')
+              'rgeos','raster','sp','sf','ggrepel','ggthemes','MCMCvis')
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
-setwd("~/1_Work/GoogleDrive_emperor_satellite/GoogleDrive_emperorsatellite/EMPE_Global/analysis")
+setwd("E:/1_Work/GoogleDrive_emperor_satellite/GoogleDrive_emperorsatellite/EMPE_Global/analysis")
 
 rm(list=ls())
 
@@ -13,7 +13,6 @@ rm(list=ls())
 #----------------------------------------------------------
 load("output_empirical/EMPE_data_prepared.RData") # Data
 load(file = "output_empirical/EMPE_out.RData")    # Fitted model
-
 subset(colony_attributes, !(site_id %in% sites)) # Sites not included in analysis
 
 #----------------------------------------------------------
@@ -22,6 +21,7 @@ subset(colony_attributes, !(site_id %in% sites)) # Sites not included in analysi
 mean(unlist(out$Rhat)>1.1, na.rm=TRUE) #proportion of Rhat values greater than 1.1
 max(unlist(out$Rhat), na.rm=TRUE) # max Rhat
 names(unlist(out$Rhat))[unlist(out$Rhat)>1.1] # Which parameters have not converged?
+MCMCtrace(out)
 
 #----------------------------------------------------------
 # Posterior predictive check
