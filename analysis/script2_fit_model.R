@@ -4,7 +4,7 @@ my.packs <- c('jagsUI',"ggplot2",'reshape2','scales','tidyverse',
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
-setwd("~/1_Work/GoogleDrive_emperor_satellite/GoogleDrive_emperorsatellite/EMPE_Global/analysis")
+setwd("~/1_Work/EMPE_Global/analysis")
 
 rm(list=ls())
 
@@ -86,16 +86,22 @@ cat("
   # Satellite observation model
   # ------------------------------------
   
-  # Describes proportional bias and variance in satellite counts
-  sat_CV ~ dunif(0,1)
-  sat_slope ~ dnorm(1,25)
+  # Describes proportional bias and variance in satellite counts for each level of image quality (1, 2, or 3)
+  sat_CV[1] ~ dunif(0,2)
+  sat_CV[2] ~ dunif(0,2)
+  sat_CV[3] ~ dunif(0,2)
+  
+  sat_slope[1] ~ dnorm(1,25)
+  sat_slope[2] ~ dnorm(1,25)
+  sat_slope[3] ~ dnorm(1,25)
+  
   sat_p ~ dunif(0,1)
   
   for (i in 1:n_obs_satellite){
     
     # Observation error (and bias) for satellite counts is estimated from data
-    sat_mean[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope 
-    sat_sd[i] <- sat_mean[i] * sat_CV + 0.001 # Tiny constant ensures tau is defined when sat_mean is zero
+    sat_mean[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope[img_qual[i]]
+    sat_sd[i] <- sat_mean[i] * sat_CV[img_qual[i]] + 0.001 # Tiny constant ensures tau is defined when sat_mean is zero
     sat_tau[i] <- pow(sat_sd[i],-2)
     
     sat_z[i] ~ dbern(sat_p)
@@ -147,28 +153,31 @@ out <- jags(data=jags.data,
             model.file="EMPE_model_empirical.jags",
             parameters.to.save=c(
               
-              # Hyper-parameters describing population sizes and growth rates
-              "r_mean_grandmean_mu",
-              "r_mean_grandmean_sd",
-              "logX1_mean",
-              "logX1_sd",
+              # ------------------------
+              # Hyper-parameters
+              # ------------------------
+              "prob_occ",               # Probability colonies are "occupied"
+              "r_mean_grandmean_mu",    # Hierarchical grand mean of colony-level annual growth rates
+              "r_mean_grandmean_sd",    # Hierarchical sd of colony-level growth rates
+              "logX1_mean",             # Hierarchical grand mean of colony-level initial abundances
+              "logX1_sd",               # Hierarchical sd of colony-level initial abundances
+              "r_sd",                   # Temporal variance of colony-level annual growth rates
+              "aerial_sigma",           # SD of aerial observations (on log scale)
+              "sat_CV",                 # Coefficient of variation in satellite observations
+              "sat_slope",              # Bias in satellite observations
+              "sat_p",                  # Probability satellite entirely fails to observe a colony that is present
               
-              # Population dynamics parameters
+              # Colony-specific mean trend
               "r_mean",
-              "r_sd",
-              "prob_occ",
               
-              # Observation parameters
-              "aerial_sigma",
-              "sat_CV",
-              "sat_slope",
-              "sat_p",
-              
-              # Estimates of abundance and trend
-              "N_global",
-              "global_trend",
+              # Colony-specific abundance each year
               "N",
-              "site_trend",
+              
+              # Global abundance each year
+              "N_global",
+              
+              # Log-linear OLS slope across the study
+              "global_trend",
               
               # Discrepancy measures for posterior predictive checks
               "RMSE_adult_count_actual",
@@ -180,8 +189,8 @@ out <- jags(data=jags.data,
             inits = inits,
             n.chains=3,
             n.thin = 50,
-            n.iter= 100000,
-            n.burnin= 50000,
+            n.iter= 600000,
+            n.burnin= 100000,
             parallel = TRUE)
 
 save(out, file = "output_empirical/EMPE_out.RData")
