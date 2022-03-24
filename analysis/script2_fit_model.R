@@ -1,6 +1,6 @@
 # install/load necessary packages
-my.packs <- c('jagsUI',"ggplot2",'reshape2','scales','tidyverse',
-              'rgeos','raster','sp','sf','ggrepel')
+my.packs <- c('jagsUI')
+
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
@@ -19,41 +19,58 @@ cat("
   # Population process model
   # ------------------------------------
   
-  # Occupancy state in each year, at each colony
-  prob_occ ~ dunif(0,1)
-  for (s in 1:n_sites){
-    for (t in 1:n_years){
-      z_occ[s,t] ~ dbern(prob_occ)
-    }
-  }
-  
-  # SPATIAL RANDOM EFFECTS FOR r_mean[s]
-  r_mean_grandmean_mu ~ dnorm(0,1)
-  r_mean_grandmean_sd ~ dunif(0,2)
-  r_mean_grandmean_tau <- pow(r_mean_grandmean_sd,-2)
-  
-  # SPATIAL RANDOM EFFECTS FOR X[s,1]
+  # Spatial random effect for X[s,1]
   X1_mean ~ dunif(0,50000)
   logX1_mean <- log(X1_mean)
   logX1_sd ~ dunif(0,2)
   logX1_tau <- pow(logX1_sd,-2)
   
-  # Population growth process
+  # Spatial random effect for r_mean[s]
+  r_mean_grandmean_mu ~ dnorm(0,1)
+  r_mean_grandmean_sd ~ dunif(0,2)
+  r_mean_grandmean_tau <- pow(r_mean_grandmean_sd,-2)
+  
+  # Temporal variance in population growth
   r_sd ~ dunif(0,2) 
   r_tau <- pow(r_sd,-2)
   
+  # Growth dynamics at each colony
   for (s in 1:n_sites){
     
-    r_mean[s] ~ dnorm(r_mean_grandmean_mu,r_mean_grandmean_tau) # Drawn from shared distribution
+    # Initial abundance at colony 
     log_X[s,1] ~ dnorm(logX1_mean,logX1_tau)
-    N[s,1] <- exp(log_X[s,1]) * z_occ[s,1]
     
+    # Median annual change at colony
+    r_mean[s] ~ dnorm(r_mean_grandmean_mu,r_mean_grandmean_tau) 
+    
+    # Population growth from year to year at colony
     for (t in 1:(n_years-1)){
-      
-      log_X[s,t+1] ~ dnorm(log_X[s,t] + r_mean[s] - 1/(2*r_tau), r_tau)
-      N[s,t+1] <- exp(log_X[s,t+1]) * z_occ[s,t+1]
+      log_X[s,t+1] ~ dnorm(log_X[s,t] + r_mean[s], r_tau)
     }
   } 
+  
+  # Probability colony is occupied each year
+  prob_occ ~ dunif(0,1)
+  
+  # Occupancy dynamics at each colony (not a Markov process)
+  for (s in 1:n_sites){
+    for (t in 1:n_years){
+    
+      # True occupancy state at colony in each year
+      z_occ[s,t] ~ dbern(prob_occ)
+      
+    }
+  }
+  
+  # ------------------------------------
+  # Annual population indices
+  # ------------------------------------
+  
+  for (s in 1:n_sites){
+    for (t in 1:n_years){
+      N[s,t] <- exp(log_X[s,t]) * z_occ[s,t]
+    }
+  }
   
   # ------------------------------------
   # Aerial observation model
@@ -65,64 +82,39 @@ cat("
   for (i in 1:n_obs_aerial){
     
     # Adult counts assumed to be poisson distributed with mean centred on seasonal expected value
-    log_lambda[i] ~ dnorm(log_X[aerial_site[i],aerial_year[i]] - 1/(2*aerial_tau), aerial_tau)
-    adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * exp(log_lambda[i]))
+    lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] - 0.5*pow(aerial_sigma,2), aerial_tau)
+    adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * lambda[i])
     
-    # ------------------------------------
-    # FOR POSTERIOR PREDICTIVE CHECK
-    # ------------------------------------
-    sim_log_lambda[i] ~ dnorm(log_X[aerial_site[i],aerial_year[i]] - 1/(2*aerial_tau), aerial_tau)
-    sim_adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * exp(sim_log_lambda[i]))
-    
-    # Expected values
-    expected_adult_count[i] <- prob_occ * exp(log_X[aerial_site[i],aerial_year[i]] + 1/(2*aerial_tau))
-    
-    # Discrepancy measures
-    sqE_adult_count_actual[i] <- pow(adult_count[i] - expected_adult_count[i],2)
-    sqE_adult_count_sim[i] <- pow(sim_adult_count[i] - expected_adult_count[i],2)
   }
   
   # ------------------------------------
   # Satellite observation model
   # ------------------------------------
   
-  # Describes proportional bias and variance in satellite counts for each level of image quality (1, 2, or 3)
-  sat_CV[1] ~ dunif(0,2)
-  sat_CV[2] ~ dunif(0,2)
-  sat_CV[3] ~ dunif(0,2)
+  # Describes proportional bias (slope) and variance in satellite counts for each level of image quality (1, 2, or 3)
+  for (i in 1:3){
+    sat_slope[i] ~ dnorm(1,25)
+    sat_CV[i] ~ dunif(0,2)
+  }
   
-  sat_slope[1] ~ dnorm(1,25)
-  sat_slope[2] ~ dnorm(1,25)
-  sat_slope[3] ~ dnorm(1,25)
-  
+  # Probability a satellite fails to detect a colony that is actually present
   sat_p ~ dunif(0,1)
   
   for (i in 1:n_obs_satellite){
     
+    # Colony detection state (1 = colony was detected)
+    sat_z[i] ~ dbern(sat_p)
+    
     # Observation error (and bias) for satellite counts is estimated from data
     sat_mean[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope[img_qual[i]]
-    sat_sd[i] <- sat_mean[i] * sat_CV[img_qual[i]] + 0.001 # Tiny constant ensures tau is defined when sat_mean is zero
+    sat_sd[i] <- sat_mean[i] * sat_CV[img_qual[i]] + 0.001 # Tiny constant ensures tau is defined when N[s,y] is zero
     sat_tau[i] <- pow(sat_sd[i],-2)
     
-    sat_z[i] ~ dbern(sat_p)
-    satellite[i] ~ dnorm(sat_mean[i] * sat_z[i],sat_tau[i])
-    
-    #------------------------------------
-    # FOR POSTERIOR PREDICTIVE CHECK 
-    #------------------------------------
-    sim_sat_z[i] ~ dbern(sat_p)
-    sim_satellite[i] ~ dnorm(sat_mean[i] * sim_sat_z[i],sat_tau[i]) # Simulate new satellite obs (based on fitted estimates of population)
-    
-    expected_satellite[i] <- prob_occ * sat_mean[i]
-    
-    # Discrepancy measures
-    sqE_satellite_actual[i] <- pow(satellite[i] - expected_satellite[i],2)
-    sqE_satellite_sim[i] <- pow(sim_satellite[i] - expected_satellite[i],2)
-    #------------------------------------
+    satellite[i] ~ dnorm(sat_mean[i]* sat_z[i],sat_tau[i])
   }
   
   # ------------------------------------
-  # Derived quantities
+  # Global change and trend
   # ------------------------------------
   
   # Global abundance each year
@@ -134,8 +126,34 @@ cat("
   global_trend <- inprod(log(N_global[1:n_years]),regression_weights[1,1:n_years])
   
   #------------------------------------
-  # FOR POSTERIOR PREDICTIVE CHECK 
+  # Posterior predictive check
   #------------------------------------
+  
+  # Posterior predictive check for aerial count data
+  for (i in 1:n_obs_aerial){
+  
+    # Simulate aerial observations
+    sim_lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] - 0.5*pow(aerial_sigma,2), aerial_tau)
+    sim_adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * sim_lambda[i])
+    
+    # Calculate discrepancy measures of actual and simulated data
+    sqE_adult_count_actual[i] <- pow(adult_count[i] - N[aerial_site[i],aerial_year[i]] ,2)
+    sqE_adult_count_sim[i] <- pow(sim_adult_count[i] - N[aerial_site[i],aerial_year[i]],2)
+    
+  }
+  
+  # Posterior predictive check for satellite data
+  for (i in 1:n_obs_satellite){
+  
+    # Simulate satellite observations
+    sim_sat_z[i] ~ dbern(sat_p)
+    sim_satellite[i] ~ dnorm(sat_mean[i] * sim_sat_z[i],sat_tau[i]) # Simulate new satellite obs (based on fitted estimates of population)
+    
+    # Calculate discrepancy measures of actual and simulated data
+    sqE_satellite_actual[i] <- pow(satellite[i] - N[satellite_site[i],satellite_year[i]],2)
+    sqE_satellite_sim[i] <- pow(sim_satellite[i] - N[satellite_site[i],satellite_year[i]],2)
+    
+  }
   
   # Root mean squared error of empirical data
   RMSE_adult_count_actual <- sqrt(mean(sqE_adult_count_actual[]))
@@ -167,7 +185,7 @@ out <- jags(data=jags.data,
               "sat_slope",              # Bias in satellite observations
               "sat_p",                  # Probability satellite entirely fails to observe a colony that is present
               
-              # Colony-specific mean trend
+              # Colony-specific mean annual differences
               "r_mean",
               
               # Colony-specific abundance each year
@@ -188,9 +206,9 @@ out <- jags(data=jags.data,
             
             inits = inits,
             n.chains=3,
-            n.thin = 50,
-            n.iter= 600000,
-            n.burnin= 100000,
+            n.thin = 5,
+            n.iter= 60000,
+            n.burnin= 10000,
             parallel = TRUE)
 
 save(out, file = "output_empirical/EMPE_out.RData")
