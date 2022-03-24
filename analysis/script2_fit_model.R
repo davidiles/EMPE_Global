@@ -206,9 +206,9 @@ out <- jags(data=jags.data,
             
             inits = inits,
             n.chains=3,
-            n.thin = 5,
-            n.iter= 60000,
-            n.burnin= 10000,
+            n.thin = 50,
+            n.iter= 600000,
+            n.burnin= 100000,
             parallel = TRUE)
 
 save(out, file = "output_empirical/EMPE_out.RData")
