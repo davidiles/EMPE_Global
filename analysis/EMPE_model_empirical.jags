@@ -8,17 +8,17 @@
   # Spatial random effect for X[s,1]
   X1_mean ~ dunif(0,50000)
   logX1_mean <- log(X1_mean)
-  logX1_sd ~ dunif(0,2)
-  logX1_tau <- pow(logX1_sd,-2)
+  logX1_tau ~ dgamma(0.001,0.001)
+  logX1_sigma <- 1/pow(logX1_tau,0.5)
   
   # Spatial random effect for r_mean[s]
-  r_mean_grandmean_mu ~ dnorm(0,1)
-  r_mean_grandmean_sd ~ dunif(0,2)
-  r_mean_grandmean_tau <- pow(r_mean_grandmean_sd,-2)
+  r_mean_grandmean_mu ~ dnorm(0,25)
+  r_mean_grandmean_tau ~ dgamma(0.001,0.001)
+  r_mean_grandmean_sigma <- 1/pow(r_mean_grandmean_tau,0.5)
   
   # Temporal variance in population growth
-  r_sd ~ dunif(0,2) 
-  r_tau <- pow(r_sd,-2)
+  r_tau ~ dgamma(0.001,0.001)
+  r_sigma <- 1/pow(r_tau,0.5)
   
   # Growth dynamics at each colony
   for (s in 1:n_sites){
@@ -28,6 +28,7 @@
     
     # Median annual change at colony
     r_mean[s] ~ dnorm(r_mean_grandmean_mu,r_mean_grandmean_tau) 
+    #r_mean[s] ~ dnorm(0,25)
     
     # Population growth from year to year at colony
     for (t in 1:(n_years-1)){
@@ -35,7 +36,7 @@
     }
   } 
   
-  # Probability colony is occupied each year
+  # Probability each colony is occupied each year
   prob_occ ~ dunif(0,1)
   
   # Occupancy dynamics at each colony (not a Markov process)
@@ -49,7 +50,7 @@
   }
   
   # ------------------------------------
-  # Annual population indices
+  # Annual population indices at each colony
   # ------------------------------------
   
   for (s in 1:n_sites){
@@ -59,17 +60,22 @@
   }
   
   # ------------------------------------
+  # Shared 'day of season' effect to account for phenology
+  # ------------------------------------
+  DoS_slope ~ dnorm(0,25)
+
+  # ------------------------------------
   # Aerial observation model
   # ------------------------------------
   
-  aerial_sigma ~ dunif(0,2) 
-  aerial_tau <- pow(aerial_sigma,-2)
+  aerial_tau ~ dgamma(0.001,0.001) 
+  aerial_sigma <- 1/pow(aerial_tau,0.5)
   
   for (i in 1:n_obs_aerial){
     
-    # Adult counts assumed to be poisson distributed with mean centred on seasonal expected value
-    lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] - 0.5*pow(aerial_sigma,2), aerial_tau)
-    adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * lambda[i])
+    lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] + aerial_DoS[i]*DoS_slope - 0.5*pow(aerial_sigma,2), aerial_tau)
+    adult_expected[i] <- z_occ[aerial_site[i],aerial_year[i]] * lambda[i]
+    adult_count[i] ~ dpois(adult_expected[i])
     
   }
   
@@ -82,21 +88,15 @@
     sat_slope[i] ~ dnorm(1,25)
     sat_CV[i] ~ dunif(0,2)
   }
-  
-  # Probability a satellite fails to detect a colony that is actually present
-  sat_p ~ dunif(0,1)
-  
+
   for (i in 1:n_obs_satellite){
     
-    # Colony detection state (1 = colony was detected)
-    sat_z[i] ~ dbern(sat_p)
-    
     # Observation error (and bias) for satellite counts is estimated from data
-    sat_mean[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope[img_qual[i]]
-    sat_sd[i] <- sat_mean[i] * sat_CV[img_qual[i]] + 0.001 # Tiny constant ensures tau is defined when N[s,y] is zero
-    sat_tau[i] <- pow(sat_sd[i],-2)
+    sat_expected[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope[img_qual[i]] * exp(DoS_slope * satellite_DoS[i])
+    sat_sigma[i] <- sat_expected[i] * sat_CV[img_qual[i]] + 0.00001 # Tiny constant ensures tau is define when var is zero
+    sat_tau[i] <- pow(sat_sigma[i],-2)
     
-    satellite[i] ~ dnorm(sat_mean[i]* sat_z[i],sat_tau[i])
+    satellite[i] ~ dnorm(sat_expected[i], sat_tau[i])
   }
   
   # ------------------------------------
@@ -112,14 +112,14 @@
   global_trend <- inprod(log(N_global[1:n_years]),regression_weights[1,1:n_years])
   
   #------------------------------------
-  # Posterior predictive check
+  # Posterior predictive checks
   #------------------------------------
   
   # Posterior predictive check for aerial count data
   for (i in 1:n_obs_aerial){
   
     # Simulate aerial observations
-    sim_lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] - 0.5*pow(aerial_sigma,2), aerial_tau)
+    sim_lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] + aerial_DoS[i]*DoS_slope - 0.5*pow(aerial_sigma,2), aerial_tau)
     sim_adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * sim_lambda[i])
     
     # Calculate discrepancy measures of actual and simulated data
@@ -132,8 +132,7 @@
   for (i in 1:n_obs_satellite){
   
     # Simulate satellite observations
-    sim_sat_z[i] ~ dbern(sat_p)
-    sim_satellite[i] ~ dnorm(sat_mean[i] * sim_sat_z[i],sat_tau[i]) # Simulate new satellite obs (based on fitted estimates of population)
+    sim_satellite[i] ~ dnorm(sat_expected[i],sat_tau[i])
     
     # Calculate discrepancy measures of actual and simulated data
     sqE_satellite_actual[i] <- pow(satellite[i] - N[satellite_site[i],satellite_year[i]],2)

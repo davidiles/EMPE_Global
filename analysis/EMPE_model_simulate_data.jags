@@ -5,24 +5,32 @@
   # Population process model
   # ------------------------------------
   
+  # Simulate initial abundances for each colony (X[s,1])
+  logX1_tau <- pow(logX1_sigma,-2) 
+  for (s in 1:n_sites){
+    log_X[s,1] ~ dnorm(logX1_mean,logX1_tau)
+    N[s,1] <- exp(log_X[s,1]) * z_occ[s,1]
+  }
+  
+  # Simulate occupancy status in each year, at each colony
   for (s in 1:n_sites){
     for (t in 1:n_years){
+    
+      # True occupancy state at colony in each year
       z_occ[s,t] ~ dbern(prob_occ)
+      
     }
   }
   
-  r_mean_grandmean_tau <- pow(r_mean_grandmean_sd,-2)
-  logX1_tau <- pow(logX1_sd,-2)
-  r_tau <- pow(r_sd,-2)
+  # Simulate temporal dynamics at each colony
+  r_mean_grandmean_tau <- pow(r_mean_grandmean_sigma,-2)
+  r_tau <- pow(r_sigma,-2)
 
   for (s in 1:n_sites){
     
-    r_mean[s] ~ dnorm(r_mean_grandmean_mu,r_mean_grandmean_tau) # Drawn from shared distribution
-    log_X[s,1] ~ dnorm(logX1_mean,logX1_tau)
-    N[s,1] <- exp(log_X[s,1]) * z_occ[s,1]
-    
+    r_mean[s] ~ dnorm(r_mean_grandmean_mu,r_mean_grandmean_tau) 
+
     for (t in 1:(n_years-1)){
-      
       log_X[s,t+1] ~ dnorm(log_X[s,t] + r_mean[s] - 1/(2*r_tau), r_tau)
       N[s,t+1] <- exp(log_X[s,t+1]) * z_occ[s,t+1]
     }
@@ -37,8 +45,8 @@
   for (i in 1:n_obs_aerial){
     
     # Adult counts assumed to be poisson distributed with mean centred on seasonal expected value
-    log_lambda[i] ~ dnorm(log_X[aerial_site[i],aerial_year[i]] - 1/(2*aerial_tau), aerial_tau)
-    adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * exp(log_lambda[i]))
+    lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] - 0.5*pow(aerial_sigma,2), aerial_tau)
+    adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * lambda[i])
     
   }
   
@@ -49,12 +57,10 @@
   for (i in 1:n_obs_satellite){
     
     # Observation error (and bias) for satellite counts is estimated from data
-    sat_mean[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope[img_qual[i]]
-    sat_sd[i] <- sat_mean[i] * sat_CV[img_qual[i]] + 0.001 # Tiny constant ensures tau is defined when sat_mean is zero
-    sat_tau[i] <- pow(sat_sd[i],-2)
-    
-    sat_z[i] ~ dbern(sat_p)
-    satellite[i] ~ dnorm(sat_mean[i] * sat_z[i],sat_tau[i])
+    sat_mean[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope
+    sat_sigma[i] <- sat_mean[i] * sat_CV + 0.00001 # Tiny constant ensures tau is define when var is zero
+    sat_tau[i] <- pow(sat_sigma[i],-2)
+    satellite[i] ~ dnorm(sat_mean[i], sat_tau[i])
 
   }
   

@@ -7,3 +7,4 @@ analysis/script4_simulation.R
 data/empe_aerial.csv
 data/empe_satellite.csv
 *.docx
+from_collaborators/*
