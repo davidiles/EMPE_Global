@@ -4,22 +4,23 @@ my.packs <- c('jagsUI',"ggplot2",'reshape2','scales','tidyverse',
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
-setwd("~/1_Work/EMPE_Global_revised/analysis")
+setwd("~/1_Work/EMPE_Global/analysis")
 
 rm(list=ls())
 
 #----------------------------------------------------------
 # Load data and results
 #----------------------------------------------------------
-load("output_empirical/EMPE_data_prepared_2023_05_25.RData") # Data
-load(file = "output_empirical/EMPE_out_2023_05_25.RData")    # Fitted model
+load("output_empirical/EMPE_data_prepared.RData") # Data
+load(file = "output_empirical/EMPE_out.RData")    # Fitted model
 
 #----------------------------------------------------------
 # Output parameter estimates
 #----------------------------------------------------------
-parameter_estimates = out$summary[1:which(rownames(out$summary) == "sat_slope[3]"),] %>%as.data.frame()
+parameter_estimates = out$summary[1:which(rownames(out$summary) == "sat_p"),] %>%
+  as.data.frame()
 
-write.csv(parameter_estimates, file = "output_empirical/tables/parameter_estimates_2023_05_25.csv", row.names = TRUE)
+write.csv(parameter_estimates, file = "output_empirical/tables/parameter_estimates.csv", row.names = TRUE)
 
 #----------------------------------------------------------
 # Functions
@@ -128,9 +129,9 @@ regional_estimate_fn <- function(region_names = NA, N_samples = N_samples){
   # --------------------------------
   # Save summary tables
   # --------------------------------
-  #write.csv(regional_abundance_summary, file = paste0("output_empirical/tables/REGIONAL_abundance_",region_names,".csv"), row.names = FALSE)
-  #write.csv(regional_change_summary, file = paste0("output_empirical/tables/REGIONAL_change_",region_names,".csv"), row.names = FALSE)
-  #write.csv(regional_trend_summary, file = paste0("output_empirical/tables/REGIONAL_trend_",region_names,".csv"), row.names = FALSE)
+  write.csv(regional_abundance_summary, file = paste0("output_empirical/tables/REGIONAL_abundance_",region_names,".csv"), row.names = FALSE)
+  write.csv(regional_change_summary, file = paste0("output_empirical/tables/REGIONAL_change_",region_names,".csv"), row.names = FALSE)
+  write.csv(regional_trend_summary, file = paste0("output_empirical/tables/REGIONAL_trend_",region_names,".csv"), row.names = FALSE)
   
   # --------------------------------
   # Generate separate plots for each region
@@ -153,7 +154,7 @@ regional_estimate_fn <- function(region_names = NA, N_samples = N_samples){
     # --------------------------------
     # Save figures
     # --------------------------------
-    tiff(filename = paste0("output_empirical/figures/REGIONAL_",region_names,"_",reg,"_2023_05_25.tif"), width = 4, height = 3, units = "in", res = 300)
+    tiff(filename = paste0("output_empirical/figures/REGIONAL_",region_names,"_",reg,".tif"), width = 4, height = 3, units = "in", res = 300)
     print(reg_plot)
     dev.off()
     
@@ -178,7 +179,6 @@ regional_estimate_fn <- function(region_names = NA, N_samples = N_samples){
 N_samples <- out$sims.list$N %>% 
   reshape2::melt() %>% 
   rename(mcmc_sample = Var1, site_number = Var2, year_number = Var3, N = value)
-
 N_samples$year <- years[N_samples$year_number]
 
 #----------------------------------------------------------
@@ -232,7 +232,7 @@ colony_summary = N_samples %>%
             prob_decline_since_2009 = mean(delta_N < 0)) %>%
   left_join(colony_attributes)
 
-#write.csv(colony_summary, file = "output_empirical/tables/colony_summary.csv", row.names = FALSE)
+write.csv(colony_summary, file = "output_empirical/tables/colony_summary.csv", row.names = FALSE)
 
 #----------------------------------------------------------
 # Plot dynamics within each colony
@@ -252,7 +252,7 @@ colony_plot <- ggplot(data = colony_summary)+
   facet_grid(site_id~., scales = "free_y")+
   theme_few()
 
-pdf(file = "output_empirical/figures/colony_dynamics_fitted_2023_05_25.pdf", width = 5, height = 50)
+pdf(file = "output_empirical/figures/colony_dynamics_fitted.pdf", width = 5, height = 50)
 print(colony_plot)
 dev.off()
 
@@ -266,9 +266,9 @@ aer_vs_expected_df = full_join(colony_summary, aer[,c("site_id","year","site_num
 
 # At some sites there are many aerial observations per year.  Calculate the mean of these for plotting
 aer_vs_expected_df = aer_vs_expected_df %>%
-  group_by(site_id,year)  %>%
-  summarize(N_mean = mean(N_mean),
-            adult_count = mean(adult_count))
+  group_by(site_id,year) # %>%
+  # summarize(N_mean = mean(N_mean),
+  #           adult_count = mean(adult_count))
 
 # Percent error
 sum_estimated = sum(aer_vs_expected_df$N_mean)
@@ -302,10 +302,7 @@ sat_vs_expected_df = full_join(colony_summary, sat[,c("site_id","img_year","area
 sat_vs_expected_df = sat_vs_expected_df %>%
   group_by(site_id,year) %>%
   summarize(N_mean = mean(N_mean),
-            area_m2 = mean(area_m2))
-
-sat_vs_expected_df$percent_diff <- (sat_vs_expected_df$N_mean - sat_vs_expected_df$area_m2)/sat_vs_expected_df$area_m2 * 100
-subset(sat_vs_expected_df,percent_diff >= 500)
+            adult_count = mean(adult_count))
 
 lim = c(0.1,max(sat_vs_expected_df[,c("area_m2","N_mean")]))
 ggplot(sat_vs_expected_df,aes(x = area_m2, y = N_mean)) +
@@ -322,37 +319,37 @@ ggplot(sat_vs_expected_df,aes(x = area_m2, y = N_mean)) +
 #----------------------------------------------------------
 
 
-# # Change categories (>100% decrease,50-100% decrease, 0-50% decrease, 0-50% increase, 50-100% increase)
-# df_2009 = subset(colony_summary, year == 2009)
-# df_2018 = subset(colony_summary, year == 2018)
-# world <- map_data("world")
-# lim <- max(abs(df_2018$change_since_2009_mean),na.rm = TRUE)
-# 
-# trend_map <- ggplot(world, aes(x=long, y=lat, group=group)) +
-#   geom_polygon(fill = "gray95", col = "gray55",alpha=0.5) +
-#   scale_y_continuous(breaks=(-2:2) * 30, limits = c(-90,-60)) +
-#   scale_x_continuous(breaks=(-4:4) * 45) +
-#   coord_map("ortho", orientation=c(-90, 0, 0)) +
-#   theme_bw()+
-#   theme(axis.text = element_blank(),
-#         axis.title = element_blank(),
-#         axis.ticks=element_blank(),
-#         panel.border = element_blank()) +
-#   geom_point(data = df_2018,
-#              aes(x=lon, y=lat,group=1,
-#                  col = change_since_2009_mean#,size = change_since_2009_mean
-#                  ))+
-#   geom_label_repel(data = df_2018,aes(x=lon, y=lat,group=1,
-#                                       label = site_id,
-#                                       col = change_since_2009_mean
-#                                       ))+
-#   scale_color_gradientn(colors = c("red","gray90","blue"),limits = c(-lim,lim), name = "Change since 2009")+
-#   scale_size_continuous(name = "Change since 2009")
-# print(trend_map)
-# 
-# pdf(file = "./output_empirical/FigX_trend_map.pdf", width = 8, height = 8)
-# print(trend_map)
-# dev.off()
+# Change categories (>100% decrease,50-100% decrease, 0-50% decrease, 0-50% increase, 50-100% increase)
+df_2009 = subset(colony_summary, year == 2009)
+df_2018 = subset(colony_summary, year == 2018)
+world <- map_data("world")
+lim <- max(abs(df_2018$change_since_2009_mean),na.rm = TRUE)
+
+trend_map <- ggplot(world, aes(x=long, y=lat, group=group)) +
+  geom_polygon(fill = "gray95", col = "gray55",alpha=0.5) +
+  scale_y_continuous(breaks=(-2:2) * 30, limits = c(-90,-60)) +
+  scale_x_continuous(breaks=(-4:4) * 45) +
+  coord_map("ortho", orientation=c(-90, 0, 0)) +
+  theme_bw()+
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks=element_blank(),
+        panel.border = element_blank()) +
+  geom_point(data = df_2018,
+             aes(x=lon, y=lat,group=1,
+                 col = change_since_2009_mean#,size = change_since_2009_mean
+                 ))+
+  geom_label_repel(data = df_2018,aes(x=lon, y=lat,group=1,
+                                      label = site_id,
+                                      col = change_since_2009_mean
+                                      ))+
+  scale_color_gradientn(colors = c("red","gray90","blue"),limits = c(-lim,lim), name = "Change since 2009")+
+  scale_size_continuous(name = "Change since 2009")
+print(trend_map)
+
+pdf(file = "./output_empirical/FigX_trend_map.pdf", width = 8, height = 8)
+print(trend_map)
+dev.off()
 
 
 #----------------------------------------------------------
@@ -366,7 +363,7 @@ fast_ice_reg <- regional_estimate_fn(region_names = "ice_reg", N_samples = N_sam
 pack_ice_reg <- regional_estimate_fn(region_names = "p_ice_reg", N_samples = N_samples)
 
 # Regional trends based on ccamlr regions
-#ccamlr_reg <- regional_estimate_fn(region_names = "ccamlr_reg", N_samples = N_samples)
+ccamlr_reg <- regional_estimate_fn(region_names = "ccamlr_reg", N_samples = N_samples)
 
 #----------------------------------------------------------
 # Correlation between regional sea ice trends and population trends
@@ -394,7 +391,7 @@ sea_ice_plot <- ggplot(data = popchange_fastice,aes(x = FastIceTrend,
 print(sea_ice_plot)
 
 # Save figure
-tiff(filename = "output_empirical/figures/sea_ice_correlation_2023_05_25.tif", width = 7, height = 3.5, units = "in", res = 300)
+tiff(filename = "output_empirical/figures/sea_ice_correlation.tif", width = 7, height = 3.5, units = "in", res = 300)
 print(sea_ice_plot)
 dev.off()
 
@@ -415,7 +412,7 @@ sea_ice_plot_black <- ggplot(data = popchange_fastice,aes(x = FastIceTrend,
 print(sea_ice_plot_black)
 
 # Save figure
-tiff(filename = "output_empirical/figures/sea_ice_correlation_black_2023_05_25.tif", width = 5, height = 3.5, units = "in", res = 300)
+tiff(filename = "output_empirical/figures/sea_ice_correlation_black.tif", width = 5, height = 3.5, units = "in", res = 300)
 print(sea_ice_plot_black)
 dev.off()
 
@@ -461,9 +458,9 @@ global_trend_summary <- data.frame(Region = "Global",
                                    Estimate = global_change_trend$OLS_regression_summary) %>% 
   spread(Quantile, Estimate)
 
-write.csv(global_abundance_summary, file = "output_empirical/tables/GLOBAL_abundance_2023_05_25.csv", row.names = FALSE)
-write.csv(global_change_summary, file = "output_empirical/tables/GLOBAL_change_2023_05_25.csv", row.names = FALSE)
-write.csv(global_trend_summary, file = "output_empirical/tables/GLOBAL_trend_2023_05_25.csv", row.names = FALSE)
+write.csv(global_abundance_summary, file = "output_empirical/tables/GLOBAL_abundance.csv", row.names = FALSE)
+write.csv(global_change_summary, file = "output_empirical/tables/GLOBAL_change.csv", row.names = FALSE)
+write.csv(global_trend_summary, file = "output_empirical/tables/GLOBAL_trend.csv", row.names = FALSE)
 
 global_plot <- ggplot(global_abundance_summary, aes(x = Year, y = N_mean, ymin = N_q05, ymax = N_q95))+
   geom_ribbon(fill = "#0071fe", alpha = 0.3)+
@@ -475,98 +472,97 @@ global_plot <- ggplot(global_abundance_summary, aes(x = Year, y = N_mean, ymin =
   theme_few()
 print(global_plot)
 
-tiff(filename = "output_empirical/figures/GLOBAL_2023_05_25.tif", width = 4, height = 3, units = "in", res = 300)
+tiff(filename = "output_empirical/figures/GLOBAL.tif", width = 4, height = 3, units = "in", res = 300)
 print(global_plot)
 dev.off()
 
-# #----------------------------------------------------------
-# # Calculate percent of population currently within an MPA
-# #----------------------------------------------------------
-# 
-# mpa_current = N_samples %>%
-#   left_join(colony_attributes) %>%
-#   group_by(year, mcmc_sample,in_MPA_current) %>%
-#   summarize(N = sum(N))
-# 
-# # Proportion of global population currently in MPA
-# in_current = subset(mpa_current, year == 2018 & in_MPA_current == "yes")$N
-# out_current = subset(mpa_current, year == 2018 & in_MPA_current == "no")$N
-# prop_current = in_current/(in_current+out_current)
-# 
-# # Proportion currently in an MPA
-# mean(prop_current)
-# quantile(prop_current, c(0.025,0.5,0.975))
-# 
-# # Number in an MPA
-# mpa_current_summary = mpa_current %>%
-#   group_by(year,in_MPA_current) %>%
-#   summarize(N_mean = mean(N),
-#             N_se = sd(N),
-#             N_q025 = quantile(N,0.025),
-#             N_q05 = quantile(N,0.05),
-#             N_median = median(N),
-#             N_q95 = quantile(N,0.95),
-#             N_q975 = quantile(N,0.975)) 
-# 
-# #----------------------------------------------------------
-# # Calculate percent of population within proposed MPAs
-# #----------------------------------------------------------
-# 
-# # Colony attributes file lists the names of the proposed MPAs.  Convert to a binary yes or no
-# colony_attributes$in_proposed_MPA = "yes"
-# colony_attributes$in_proposed_MPA[colony_attributes$MPA_proposed_name == ""] = "no"
-# 
-# mpa_proposed = N_samples %>%
-#   left_join(colony_attributes) %>%
-#   group_by(year, mcmc_sample,in_proposed_MPA) %>%
-#   summarize(N = sum(N))
-# 
-# # Proportion of global population in proposed MPAs (not including current MPA)
-# in_proposed = subset(mpa_proposed, year == 2018 & in_proposed_MPA == "yes")$N
-# out_proposed = subset(mpa_proposed, year == 2018 & in_proposed_MPA == "no")$N
-# prop_proposed = in_proposed/(in_proposed+out_proposed)
-# 
-# mean(prop_proposed)
-# quantile(prop_proposed, c(0.025,0.5,0.975))
-# 
-# # Number in an MPA
-# mpa_proposed_summary = mpa_proposed %>%
-#   group_by(year,in_proposed_MPA) %>%
-#   summarize(N_mean = mean(N),
-#             N_se = sd(N),
-#             N_q025 = quantile(N,0.025),
-#             N_q05 = quantile(N,0.05),
-#             N_median = median(N),
-#             N_q95 = quantile(N,0.95),
-#             N_q975 = quantile(N,0.975)) 
-# 
-# #----------------------------------------------------------
-# # Calculate percent of population within MPAs (current and proposed)
-# #----------------------------------------------------------
-# 
-# mpa_any = N_samples %>%
-#   left_join(colony_attributes) %>%
-#   group_by(year, mcmc_sample,in_MPA_any) %>%
-#   summarize(N = sum(N))
-# 
-# # Proportion of global population any in MPA (current and proposed)
-# in_any = subset(mpa_any, year == 2018 & in_MPA_any == "yes")$N
-# out_any = subset(mpa_any, year == 2018 & in_MPA_any == "no")$N
-# prop_any = in_any/(in_any+out_any)
-# 
-# mean(prop_any)
-# quantile(prop_any, c(0.025,0.5,0.975))
-# 
-# mpa_any_summary = mpa_any %>%
-#   group_by(year,in_MPA_any) %>%
-#   summarize(N_mean = mean(N),
-#             N_se = sd(N),
-#             N_q025 = quantile(N,0.025),
-#             N_q05 = quantile(N,0.05),
-#             N_median = median(N),
-#             N_q95 = quantile(N,0.95),
-#             N_q975 = quantile(N,0.975)) 
+#----------------------------------------------------------
+# Calculate percent of population currently within an MPA
+#----------------------------------------------------------
 
+mpa_current = N_samples %>%
+  left_join(colony_attributes) %>%
+  group_by(year, mcmc_sample,in_MPA_current) %>%
+  summarize(N = sum(N))
+
+# Proportion of global population currently in MPA
+in_current = subset(mpa_current, year == 2018 & in_MPA_current == "yes")$N
+out_current = subset(mpa_current, year == 2018 & in_MPA_current == "no")$N
+prop_current = in_current/(in_current+out_current)
+
+# Proportion currently in an MPA
+mean(prop_current)
+quantile(prop_current, c(0.025,0.5,0.975))
+
+# Number in an MPA
+mpa_current_summary = mpa_current %>%
+  group_by(year,in_MPA_current) %>%
+  summarize(N_mean = mean(N),
+            N_se = sd(N),
+            N_q025 = quantile(N,0.025),
+            N_q05 = quantile(N,0.05),
+            N_median = median(N),
+            N_q95 = quantile(N,0.95),
+            N_q975 = quantile(N,0.975)) 
+
+#----------------------------------------------------------
+# Calculate percent of population within proposed MPAs
+#----------------------------------------------------------
+
+# Colony attributes file lists the names of the proposed MPAs.  Convert to a binary yes or no
+colony_attributes$in_proposed_MPA = "yes"
+colony_attributes$in_proposed_MPA[colony_attributes$MPA_proposed_name == ""] = "no"
+
+mpa_proposed = N_samples %>%
+  left_join(colony_attributes) %>%
+  group_by(year, mcmc_sample,in_proposed_MPA) %>%
+  summarize(N = sum(N))
+
+# Proportion of global population in proposed MPAs (not including current MPA)
+in_proposed = subset(mpa_proposed, year == 2018 & in_proposed_MPA == "yes")$N
+out_proposed = subset(mpa_proposed, year == 2018 & in_proposed_MPA == "no")$N
+prop_proposed = in_proposed/(in_proposed+out_proposed)
+
+mean(prop_proposed)
+quantile(prop_proposed, c(0.025,0.5,0.975))
+
+# Number in an MPA
+mpa_proposed_summary = mpa_proposed %>%
+  group_by(year,in_proposed_MPA) %>%
+  summarize(N_mean = mean(N),
+            N_se = sd(N),
+            N_q025 = quantile(N,0.025),
+            N_q05 = quantile(N,0.05),
+            N_median = median(N),
+            N_q95 = quantile(N,0.95),
+            N_q975 = quantile(N,0.975)) 
+
+#----------------------------------------------------------
+# Calculate percent of population within MPAs (current and proposed)
+#----------------------------------------------------------
+
+mpa_any = N_samples %>%
+  left_join(colony_attributes) %>%
+  group_by(year, mcmc_sample,in_MPA_any) %>%
+  summarize(N = sum(N))
+
+# Proportion of global population any in MPA (current and proposed)
+in_any = subset(mpa_any, year == 2018 & in_MPA_any == "yes")$N
+out_any = subset(mpa_any, year == 2018 & in_MPA_any == "no")$N
+prop_any = in_any/(in_any+out_any)
+
+mean(prop_any)
+quantile(prop_any, c(0.025,0.5,0.975))
+
+mpa_any_summary = mpa_any %>%
+  group_by(year,in_MPA_any) %>%
+  summarize(N_mean = mean(N),
+            N_se = sd(N),
+            N_q025 = quantile(N,0.025),
+            N_q05 = quantile(N,0.05),
+            N_median = median(N),
+            N_q95 = quantile(N,0.95),
+            N_q975 = quantile(N,0.975)) 
 
 #----------------------------------------------------------
 # Estimate change over 3 generations and IUCN thresholds
@@ -587,168 +583,3 @@ mean(IUCN_3generation <= 50)
 
 # Probability the population will decline by more than 30% (Vulnerable)
 mean(IUCN_3generation <= 70)
-
-
-#----------------------------------------------------------
-# Sequentially remove each colony and recalculate global trend
-#  - provides insight into the effect each colony has on the global trend
-#----------------------------------------------------------
-
-colony_removal_results <- data.frame(site_removed = "All sites included",
-                                     
-                                     percent_change_q50 = global_change_trend$percent_change_summary["50%"],
-                                     percent_change_q05 = global_change_trend$percent_change_summary["5%"],
-                                     percent_change_q95 = global_change_trend$percent_change_summary["95%"],
-                                     
-                                     OLS_regression_q50 = global_change_trend$OLS_regression_summary["50%"],
-                                     OLS_regression_q05 = global_change_trend$OLS_regression_summary["5%"],
-                                     OLS_regression_q95 = global_change_trend$OLS_regression_summary["95%"])
-
-
-for (i in 1:nrow(colony_attributes)){
-  
-  # Remove focal colony from global sum
-  N_global_minus1 <- out$sims.list$N[,-i,] %>%
-    apply(.,c(1,3),sum)
-  
-  colnames(N_global_minus1) <- year_vec
-  N_global_minus1 <- N_global_minus1 %>% 
-    reshape2::melt() %>% 
-    rename(mcmc_sample = Var1, Year = Var2, N = value)
-  
-  N_global_minus1_matrix = N_global_minus1 %>% 
-    spread(Year, N) %>%
-    dplyr::select(-mcmc_sample) %>%
-    as.matrix()
-  
-  global_change_trend_minus1 <- change_trend_fn(N_global_minus1_matrix)
-  
-  colony_removal_results <- rbind(colony_removal_results, 
-                                  data.frame(site_removed = colony_attributes$site_id[i],
-                                             
-                                             percent_change_q50 = global_change_trend_minus1$percent_change_summary["50%"],
-                                             percent_change_q05 = global_change_trend_minus1$percent_change_summary["5%"],
-                                             percent_change_q95 = global_change_trend_minus1$percent_change_summary["95%"],
-                                             
-                                             OLS_regression_q50 = global_change_trend_minus1$OLS_regression_summary["50%"],
-                                             OLS_regression_q05 = global_change_trend_minus1$OLS_regression_summary["5%"],
-                                             OLS_regression_q95 = global_change_trend_minus1$OLS_regression_summary["95%"]
-                                  ))
-}
-
-# Merge with colony attributes table
-colony_removal_results <- colony_removal_results %>% full_join(colony_attributes, by = c("site_removed" = "site_id"))
-
-colony_removal_results$p_ice_reg[1] <- ""
-colony_removal_results$ice_reg[1] <- ""
-
-colony_removal_results$p_ice_reg <- factor(colony_removal_results$p_ice_reg,
-                                           levels = c(
-                                             "Ross",
-                                             "Bell-Amundsen",
-                                             "Weddell",
-                                             "Indian",
-                                             "Pacific",
-                                             ""))
-
-colony_removal_results <- colony_removal_results %>%
-  arrange(p_ice_reg,img_lon_mean)
-
-
-colony_removal_results$site_removed <- factor(colony_removal_results$site_removed,
-                                              levels = colony_removal_results$site_removed)
-
-
-ggplot(colony_removal_results, aes(y = site_removed, 
-                                   x = OLS_regression_q50,
-                                   xmin = OLS_regression_q05,
-                                   xmax = OLS_regression_q95,
-                                   col = p_ice_reg))+
-  geom_vline(xintercept = colony_removal_results$OLS_regression_q50[which(colony_removal_results$site_removed == "All sites included")],
-             col = "gray80", size = 3)+
-  geom_vline(xintercept = colony_removal_results$OLS_regression_q05[which(colony_removal_results$site_removed == "All sites included")],
-             col = "gray80", size = 1.5)+
-  geom_vline(xintercept = colony_removal_results$OLS_regression_q95[which(colony_removal_results$site_removed == "All sites included")],
-             col = "gray80", size = 1.5)+
-  
-  geom_point(size=4)+
-  geom_errorbarh(height=0)+
-  theme_bw()+
-  #theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
-  scale_color_manual(values=c(
-    "#5a4ed8",
-             "#57abcf",
-             "#54edac",
-             "#feff00",
-             "#f6626d",
-             
-             "black"),
-             guide = "none")+
-  xlab("Trend Estimate")+
-  ylab("Site Omitted")+
-  facet_grid(rows = vars(p_ice_reg), scales = "free_y", space = "free") +
-  theme(panel.spacing.x = unit(10, "cm"),
-        strip.text.x = element_blank())+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  ggtitle("Global trend estimate after omitting each colony\n")
-
-#----------------------------------------------------------
-# Evaluate magnitude of change between years at each colony
-#----------------------------------------------------------
-
-change_annual <- data.frame()
-
-# For each colony, in each year, for each mcmc sample, calculate percent change between years
-for (mc_sample in 1:dim(out$sims.list$N)[1]){
-  
-  N_matrix <- out$sims.list$N[mc_sample,,]
-  N_matrix[N_matrix == 0] <- NA
-  
-  tmp <- apply(log(N_matrix),1,function(x)diff(x)) %>%
-    reshape2::melt() %>%
-    dplyr::rename(year_number = Var1,
-                  site_number = Var2,
-                  log_change = value) %>%
-    mutate(mc_sample = mc_sample)
-  
-  
-  change_annual <- rbind(change_annual, tmp)
-  
-  print(mc_sample)
-}
-
-# Calculate summaries of magnitude of change between consecutive years at each colony
-test1 <- change_annual %>%
-  group_by(mc_sample, site_number) %>%
-  summarize(ratio_med = median(ratio, na.rm = TRUE),
-            percent_change_med = median(percent_change, na.rm = TRUE))
-
-test2 <- change_annual %>%
-  group_by(year_number, site_number) %>%
-  summarize(log_change_mean = mean(log_change, na.rm = TRUE),
-            log_change_q05 = quantile(log_change,0.05, na.rm = TRUE),
-            log_change_q95 = quantile(log_change,0.95, na.rm = TRUE)) %>%
-  full_join(colony_attributes[,c("site_id","site_number")],.)
-
-scale_y <- data.frame(log_diff = c(log(0.5),log(0.75),log(1),-log(0.75),-log(0.5)))
-scale_y$percent_change <- (100*(exp(scale_y$log_diff)-1)) %>% round()
-scale_y$label <- paste0(scale_y$percent_change,"%")
-scale_y$label[4:5] <- paste0("+",scale_y$label[4:5])
-scale_y
-
-# Plot estimates of year-to-year change at each colony
-ggplot(test2, aes(x = year_number, y = log_change_mean, ymin = log_change_q05, ymax = log_change_q95))+
-  geom_point()+
-  geom_errorbar(width=0)+
-  facet_wrap(site_id~.)+
-  scale_y_continuous(breaks = scale_y$log_diff, labels = scale_y$label)+
-  theme_bw()+
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank())+
-  geom_hline(yintercept = c(log(0.5),-log(0.5)), col = "orangered", alpha = 0.5)+
-  geom_hline(yintercept = c(log(0.75),-log(0.75)), col = "orangered", alpha = 0.25)+
-  geom_hline(yintercept = 0, col = "orangered", alpha = 0.1)
-
-#----------------------------------------------------------
-# Calculate model residuals, and regress against date of survey using Dharma
-#----------------------------------------------------------

@@ -1,4 +1,18 @@
+# install/load necessary packages
+my.packs <- c('jagsUI')
 
+if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
+lapply(my.packs, require, character.only = TRUE)
+
+setwd("~/1_Work/EMPE_Global/analysis")
+
+rm(list=ls())
+
+load("output_empirical/EMPE_data_prepared.RData")
+
+# The jags script to fit the model
+sink("EMPE_model_empirical.jags")
+cat("
     model {
   
   # ------------------------------------
@@ -150,4 +164,51 @@
   RMSE_satellite_sim <- sqrt(mean(sqE_satellite_sim[]))
   
 }
-    
+    ",fill = TRUE)
+sink()
+
+out <- jags(data=jags.data,
+            model.file="EMPE_model_empirical.jags",
+            parameters.to.save=c(
+              
+              # ------------------------
+              # Hyper-parameters
+              # ------------------------
+              "prob_occ",               # Probability colonies are "occupied"
+              "r_mean_grandmean_mu",    # Hierarchical grand mean of colony-level annual growth rates
+              "r_mean_grandmean_sd",    # Hierarchical sd of colony-level growth rates
+              "logX1_mean",             # Hierarchical grand mean of colony-level initial abundances
+              "logX1_sd",               # Hierarchical sd of colony-level initial abundances
+              "r_sd",                   # Temporal variance of colony-level annual growth rates
+              "aerial_sigma",           # SD of aerial observations (on log scale)
+              "sat_CV",                 # Coefficient of variation in satellite observations
+              "sat_slope",              # Bias in satellite observations
+              "sat_p",                  # Probability satellite entirely fails to observe a colony that is present
+              
+              # Colony-specific mean annual differences
+              "r_mean",
+              
+              # Colony-specific abundance each year
+              "N",
+              
+              # Global abundance each year
+              "N_global",
+              
+              # Log-linear OLS slope across the study
+              "global_trend",
+              
+              # Discrepancy measures for posterior predictive checks
+              "RMSE_adult_count_actual",
+              "RMSE_satellite_actual",
+              "RMSE_adult_count_sim",
+              "RMSE_satellite_sim"
+            ),
+            
+            inits = inits,
+            n.chains=3,
+            n.thin = 50,
+            n.iter= 600000,
+            n.burnin= 100000,
+            parallel = TRUE)
+
+save(out, file = "output_empirical/EMPE_out.RData")

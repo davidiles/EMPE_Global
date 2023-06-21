@@ -1,19 +1,53 @@
 # install/load necessary packages
 my.packs <- c('jagsUI',"ggplot2",'reshape2',
               'scales','tidyverse',
-              'ggrepel','ggthemes','ggpubr')
+              'ggrepel','ggthemes')
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
-setwd("~/1_Work/EMPE_Global_revised/analysis")
+setwd("~/1_Work/EMPE_Global/analysis")
 
 rm(list=ls())
 
 # --------------------------------------
 # Load data package and fitted model
 # --------------------------------------
-load("output/EMPE_data_formatted.RData") # Data
-load(file = "output/fitted_model.RData")    # Fitted model
+load("output_empirical/EMPE_data_prepared.RData") # Data
+load(file = "output_empirical/EMPE_out.RData")    # Fitted model
+
+# --------------------------------------
+# - Prepare a data package to use for simulating new data
+# - Use sample sizes (e.g., n_sites, n_years, n_obs, etc) from observed data to
+#   ensure simulations have "realistic" data quantity and balance
+# --------------------------------------
+
+jags.data.sim <- jags.data[c("n_years","n_sites",
+                             "n_obs_aerial","aerial_site","aerial_year",
+                             "n_obs_satellite","satellite_site","satellite_year","img_qual",
+                             "regression_weights")]
+
+# Use mean parameter estimates from fitted model to simulate new data
+# (Colony-level initial abundances and trends will be simulated based on hyper-parameters)
+
+jags.data.sim = append(jags.data.sim,
+                       out$mean[c(
+                         
+                         # ------------------------
+                         # Hyper-parameters from fitted model
+                         # ------------------------
+                         "prob_occ",               # Probability colonies are "occupied"
+                         "r_mean_grandmean_mu",    # Hierarchical grand mean of colony-level annual growth rates
+                         "r_mean_grandmean_sd",    # Hierarchical sd of colony-level growth rates
+                         "logX1_mean",             # Hierarchical grand mean of colony-level initial abundances
+                         "logX1_sd",               # Hierarchical sd of colony-level initial abundances
+                         "r_sd",                   # Temporal variance of colony-level annual growth rates
+                         "aerial_sigma",           # SD of aerial observations (on log scale)
+                         "sat_CV",                 # Coefficient of variation in satellite observations
+                         "sat_slope",              # Bias in satellite observations
+                         "sat_p"                   # Probability satellite entirely fails to observe a colony that is present
+                         
+                       )])
+
 
 # --------------------------------------
 # # JAGS script used to simulate data, based on jags.data.sim
@@ -27,32 +61,24 @@ cat("
   # Population process model
   # ------------------------------------
   
-  # Simulate initial abundances for each colony (X[s,1])
-  logX1_tau <- pow(logX1_sigma,-2) 
-  for (s in 1:n_sites){
-    log_X[s,1] ~ dnorm(logX1_mean,logX1_tau)
-    N[s,1] <- exp(log_X[s,1]) * z_occ[s,1]
-  }
-  
-  # Simulate occupancy status in each year, at each colony
   for (s in 1:n_sites){
     for (t in 1:n_years){
-    
-      # True occupancy state at colony in each year
       z_occ[s,t] ~ dbern(prob_occ)
-      
     }
   }
   
-  # Simulate temporal dynamics at each colony
-  r_mean_grandmean_tau <- pow(r_mean_grandmean_sigma,-2)
-  r_tau <- pow(r_sigma,-2)
+  r_mean_grandmean_tau <- pow(r_mean_grandmean_sd,-2)
+  logX1_tau <- pow(logX1_sd,-2)
+  r_tau <- pow(r_sd,-2)
 
   for (s in 1:n_sites){
     
-    r_mean[s] ~ dnorm(r_mean_grandmean_mu,r_mean_grandmean_tau) 
-
+    r_mean[s] ~ dnorm(r_mean_grandmean_mu,r_mean_grandmean_tau) # Drawn from shared distribution
+    log_X[s,1] ~ dnorm(logX1_mean,logX1_tau)
+    N[s,1] <- exp(log_X[s,1]) * z_occ[s,1]
+    
     for (t in 1:(n_years-1)){
+      
       log_X[s,t+1] ~ dnorm(log_X[s,t] + r_mean[s] - 1/(2*r_tau), r_tau)
       N[s,t+1] <- exp(log_X[s,t+1]) * z_occ[s,t+1]
     }
@@ -67,8 +93,8 @@ cat("
   for (i in 1:n_obs_aerial){
     
     # Adult counts assumed to be poisson distributed with mean centred on seasonal expected value
-    lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] - 0.5*pow(aerial_sigma,2), aerial_tau)
-    adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * lambda[i])
+    log_lambda[i] ~ dnorm(log_X[aerial_site[i],aerial_year[i]] - 1/(2*aerial_tau), aerial_tau)
+    adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * exp(log_lambda[i]))
     
   }
   
@@ -80,9 +106,11 @@ cat("
     
     # Observation error (and bias) for satellite counts is estimated from data
     sat_mean[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope[img_qual[i]]
-    sat_sigma[i] <- sat_mean[i] * sat_CV[img_qual[i]] + 0.00001 # Tiny constant ensures tau is define when var is zero
-    sat_tau[i] <- pow(sat_sigma[i],-2)
-    satellite[i] ~ dnorm(sat_mean[i], sat_tau[i])
+    sat_sd[i] <- sat_mean[i] * sat_CV[img_qual[i]] + 0.001 # Tiny constant ensures tau is defined when sat_mean is zero
+    sat_tau[i] <- pow(sat_sd[i],-2)
+    
+    sat_z[i] ~ dbern(sat_p)
+    satellite[i] ~ dnorm(sat_mean[i] * sat_z[i],sat_tau[i])
 
   }
   
@@ -119,10 +147,10 @@ if (!file.exists("./output_simulation/sim_results.RData")){
 # and statistical model is applied to estimate global abundance and trend
 # --------------------------------------
 
-for (sim_run in seq(1,1000,1)){
+for (sim_run in seq(1,500,1)){
   
   set.seed(sim_run)
-  print(sim_run)
+  
   if (length(simulation_results) >= sim_run) next
   
   # Create placeholder in list for this simulation run
@@ -131,31 +159,8 @@ for (sim_run in seq(1,1000,1)){
   save(simulation_results, file = "./output_simulation/sim_results.RData")
   
   # --------------------------------------
-  # - Prepare a data package to use for simulating new data
-  # - Use sample sizes (e.g., n_sites, n_years, n_obs, etc) from observed data to
-  #   ensure simulations have "realistic" data quantity and balance
+  # Simulate data
   # --------------------------------------
-  
-  jags.data.sim <- jags.data[c("n_years","n_sites",
-                               "n_obs_aerial","aerial_site","aerial_year",
-                               "n_obs_satellite","satellite_site","satellite_year",
-                               "regression_weights")]
-  
-  # --------------------------------------
-  # Select a sample from the (non-joint) posterior of the fitted model to specify
-  # 'true' parameter values for this simulation
-  # --------------------------------------
-  
-  # Non-joint samples, to represent a wider range of population dynamic scenarios
-  jags.data.sim$prob_occ <- out$sims.list$prob_occ[sample(1:out$mcmc.info$n.samples,1)]
-  jags.data.sim$r_mean_grandmean_mu <- out$sims.list$r_mean_grandmean_mu[sample(1:out$mcmc.info$n.samples,1)]
-  jags.data.sim$r_mean_grandmean_sigma <- out$sims.list$r_mean_grandmean_sigma[sample(1:out$mcmc.info$n.samples,1)]
-  jags.data.sim$logX1_mean <- out$sims.list$logX1_mean[sample(1:out$mcmc.info$n.samples,1)]
-  jags.data.sim$logX1_sigma <- out$sims.list$logX1_sigma[sample(1:out$mcmc.info$n.samples,1)]
-  jags.data.sim$r_sigma <- out$sims.list$r_sigma[sample(1:out$mcmc.info$n.samples,1)]
-  jags.data.sim$aerial_sigma <- out$sims.list$aerial_sigma[sample(1:out$mcmc.info$n.samples,1)]
-  jags.data.sim$sat_slope <- out$sims.list$sat_slope[sample(1:out$mcmc.info$n.samples,1)]
-  jags.data.sim$sat_CV <- out$sims.list$sat_CV[sample(1:out$mcmc.info$n.samples,1)]
   
   out_sim <- jags(data=jags.data.sim,
                   model.file="EMPE_model_simulate_data.jags",
@@ -213,10 +218,7 @@ for (sim_run in seq(1,1000,1)){
   # Plot global abundance across the simulation
   global_N_plot <- ggplot(N_global_df) +
     geom_line(data = N_global_df, aes(x = year, y = N))+
-    geom_hline(yintercept = 0, col = "transparent")+
     theme_bw()
-  
-  global_N_plot 
   
   # --------------------------------------
   # Fit model to simulated data
@@ -237,6 +239,7 @@ for (sim_run in seq(1,1000,1)){
                           satellite = sim_data$satellite[1,],
                           satellite_site = jags.data.sim$satellite_site,
                           satellite_year = jags.data.sim$satellite_year,
+                          img_qual = jags.data.sim$img_qual,
                           
                           regression_weights = jags.data.sim$regression_weights
   )
@@ -253,60 +256,32 @@ for (sim_run in seq(1,1000,1)){
                       # ------------------------
                       "prob_occ",               # Probability colonies are "occupied"
                       "r_mean_grandmean_mu",    # Hierarchical grand mean of colony-level annual growth rates
-                      "r_mean_grandmean_sigma",    # Hierarchical sd of colony-level growth rates
+                      "r_mean_grandmean_sd",    # Hierarchical sd of colony-level growth rates
                       "logX1_mean",             # Hierarchical grand mean of colony-level initial abundances
-                      "logX1_sigma",               # Hierarchical sd of colony-level initial abundances
-                      "r_sigma",                   # Temporal variance of colony-level annual growth rates
-                      
+                      "logX1_sd",               # Hierarchical sd of colony-level initial abundances
+                      "r_sd",                   # Temporal variance of colony-level annual growth rates
                       "aerial_sigma",           # SD of aerial observations (on log scale)
-                      "sat_slope",              # Bias in satellite observations
                       "sat_CV",                 # Coefficient of variation in satellite observations
+                      "sat_slope",              # Bias in satellite observations
+                      "sat_p",                  # Probability satellite entirely fails to observe a colony that is present
                       
-                      # ------------------------
-                      # Colony-specific quantities
-                      # ------------------------
-                      
-                      # Colony-specific mean annual differences (could be used as a measure of colony-specific "trend")
+                      # Colony-specific mean trend
                       "r_mean",
                       
-                      # Colony-specific index of abundance each year
+                      # Colony-specific abundance each year
                       "N",
                       
-                      # ------------------------
-                      # Global index and trend estimates
-                      # ------------------------
-                      
-                      # Global index of abundance each year
+                      # Global abundance each year
                       "N_global",
                       
                       # Log-linear OLS slope across the study
-                      "global_trend",
-                      
-                      # ------------------------
-                      # Observation-specific quantities
-                      # ------------------------
-                      
-                      # Fitted values
-                      "adult_expected",
-                      "sat_expected",
-                      "sat_sigma",
-                      
-                      # Discrepancy measures for posterior predictive checks
-                      "RMSE_adult_count_actual",
-                      "RMSE_satellite_actual",
-                      "RMSE_adult_count_sim",
-                      "RMSE_satellite_sim",
-                      
-                      # Simulated datasets from fitted model (also for goodness-of-fit testing)
-                      "sim_adult_count",
-                      "sim_satellite"
-                      
+                      "global_trend"
                     ),
                     
                     inits = inits,
                     n.chains=3,
-                    n.thin = 10,
-                    n.iter= 30000,
+                    n.thin = 5,
+                    n.iter= 60000,
                     n.burnin= 10000,
                     parallel = TRUE)
   
@@ -318,49 +293,34 @@ for (sim_run in seq(1,1000,1)){
   percent_change_est = 100*(out_refit$sims.list$N_global[,jags.data$n_years] - out_refit$sims.list$N_global[,1])/out_refit$sims.list$N_global[,1]
   percent_change_true = 100*(out_sim$sims.list$N_global[,jags.data$n_years] - out_sim$sims.list$N_global[,1])/out_sim$sims.list$N_global[,1]
   
-  # -----------------------------------------
-  # Conduct goodness-of-fit evaluation (Bayesian p-values)
-  # -----------------------------------------
-  Bayesian_pval_adult <- mean(out_refit$sims.list$RMSE_adult_count_actual > out_refit$sims.list$RMSE_adult_count_sim)
-  Bayesian_pval_satellite <- mean(out_refit$sims.list$RMSE_satellite_actual > out_refit$sims.list$RMSE_satellite_sim)
-  
-  # -----------------------------------------
-  # Save results for this simulation
-  # -----------------------------------------
-  
-  simulation_summary <- data.frame(seed = sim_run,
-                                   max_Rhat = max(unlist(out_refit$Rhat),na.rm = TRUE),
-                                   Bayesian_pval_adult = Bayesian_pval_adult,
-                                   Bayesian_pval_satellite = Bayesian_pval_satellite,
-                                   
-                                   global_trend_est_mean = mean(out_refit$sims.list$global_trend),
-                                   global_trend_est_q025 = quantile(out_refit$sims.list$global_trend,0.025),
-                                   global_trend_est_q500 = quantile(out_refit$sims.list$global_trend,0.500),
-                                   global_trend_est_q975 = quantile(out_refit$sims.list$global_trend,0.975),
-                                   global_trend_true = out_sim$sims.list$global_trend,
-                                   
-                                   percent_change_est_mean = mean(percent_change_est),
-                                   percent_change_est_q025 = quantile(percent_change_est,0.025),
-                                   percent_change_est_q500 = quantile(percent_change_est,0.500),
-                                   percent_change_est_q975 = quantile(percent_change_est,0.975),
-                                   percent_change_true = percent_change_true)
-  
+  # Store in dataframe
+  trend_results_summary <- data.frame(seed = sim_run,
+                                      max_Rhat = max(unlist(out_refit$Rhat),na.rm = TRUE),
+                                      global_trend_est_mean = mean(out_refit$sims.list$global_trend),
+                                      global_trend_est_q025 = quantile(out_refit$sims.list$global_trend,0.025),
+                                      global_trend_est_q500 = quantile(out_refit$sims.list$global_trend,0.500),
+                                      global_trend_est_q975 = quantile(out_refit$sims.list$global_trend,0.975),
+                                      global_trend_true = out_sim$sims.list$global_trend,
+                                      
+                                      percent_change_est_mean = mean(percent_change_est),
+                                      percent_change_est_q025 = quantile(percent_change_est,0.025),
+                                      percent_change_est_q500 = quantile(percent_change_est,0.500),
+                                      percent_change_est_q975 = quantile(percent_change_est,0.975),
+                                      percent_change_true = percent_change_true)
   
   # -----------------------------------------
   # Save output
   # -----------------------------------------
   
   load(file = "./output_simulation/sim_results.RData")
-  simulation_results[[sim_run]] = simulation_summary
+  simulation_results[[sim_run]] = trend_results_summary
   save(simulation_results,file = "./output_simulation/sim_results.RData")
   
 }
 
-# ***********************************************************************
-# Summarize simulation results 
-#     - (bias / coverage of trend estimates)
-#     - distribution of Bayesian p-values under a correctly specified model
-# ***********************************************************************
+# -----------------------------------------------------
+# Summarize simulation results
+# -----------------------------------------------------
 
 load(file = "./output_simulation/sim_results.RData")
 length(simulation_results)
@@ -373,8 +333,6 @@ for (i in 1:length(simulation_results)){
   trend_results_summary_all <- rbind(trend_results_summary_all,simulation_results[[i]])
   
 }
-dim(trend_results_summary_all)
-trend_results_summary_all <- subset(trend_results_summary_all, max_Rhat <= 1.3)
 dim(trend_results_summary_all)
 
 # ---------------------------------------
@@ -411,7 +369,7 @@ trend_plot <- ggplot(trend_results_summary_all,aes(x = global_trend_true,
   theme_bw()
 print(trend_plot)
 
-png("./output_simulation/trend_sim_results.png", width = 5, height = 4, units = "in",res=500)
+pdf("./output_simulation/trend_sim_results.pdf", width = 5, height = 4)
 print(trend_plot)
 dev.off()
 
@@ -456,37 +414,6 @@ percent_change_plot <- ggplot(trend_results_summary_all,
   theme_bw()
 print(percent_change_plot)
 
-png("./output_simulation/change_sim_results.png", width = 5, height = 4, units = "in",res=500)
+pdf("./output_simulation/change_sim_results.pdf", width = 5, height = 4)
 print(percent_change_plot)
 dev.off()
-
-# ---------------------------------------
-# Distribution of Bayesian p-values under correctly specified model
-# ---------------------------------------
-
-pvals_adult <- ggplot(trend_results_summary_all, aes(x = Bayesian_pval_adult))+
-  geom_histogram(fill = "dodgerblue",binwidth = 0.05)+
-  theme_few()+
-  xlab("Bayesian p-value")+
-  ylab("Number of simulations")+
-  ggtitle("Bayesian p-value (adult counts)")+
-  scale_x_continuous(breaks = seq(-0.2,1.2,0.2), limits = c(0,1))
-
-pvals_satellite <- ggplot(trend_results_summary_all, aes(x = Bayesian_pval_satellite))+
-  geom_histogram(fill = "dodgerblue",binwidth = 0.05)+
-  theme_few()+
-  xlab("Bayesian p-value")+
-  ylab("Number of simulations")+
-  ggtitle("Bayesian p-value (satellite surveys)")+
-  scale_x_continuous(breaks = seq(-0.2,1.2,0.2), limits = c(0,1))
-
-pval_plot <- ggarrange(pvals_adult,pvals_satellite,nrow=2)
-pval_plot
-
-png("./output_simulation/Bayesian_pval_plot.png", width = 5, height = 7, units = "in",res=500)
-print(pval_plot)
-dev.off()
-
-# Percent of simulations with Bayesian-pvals less than empirical Bayesian pval
-# (is the Bayesian p-value calculated for empirical data within the "envelope" of
-#   expected p-values for perfectly specified models?)
