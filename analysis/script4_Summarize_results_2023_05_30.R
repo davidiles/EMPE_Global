@@ -1,6 +1,7 @@
 # install/load necessary packages
 my.packs <- c('jagsUI',"ggplot2",'reshape2','scales','tidyverse',
               'rgeos','raster','sp','sf','ggrepel','ggthemes','MCMCvis','DescTools')
+
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
@@ -11,15 +12,14 @@ rm(list=ls())
 #----------------------------------------------------------
 # Load data and results
 #----------------------------------------------------------
-load("output_empirical/EMPE_data_prepared_2023_05_25.RData") # Data
-load(file = "output_empirical/EMPE_out_2023_05_25.RData")    # Fitted model
+load("output_empirical/EMPE_data_prepared.RData") # Data
+load(file = "output/fitted_model.RData")    # Fitted model
 
 #----------------------------------------------------------
 # Output parameter estimates
 #----------------------------------------------------------
-parameter_estimates = out$summary[1:which(rownames(out$summary) == "sat_slope[3]"),] %>%as.data.frame()
-
-write.csv(parameter_estimates, file = "output_empirical/tables/parameter_estimates_2023_05_25.csv", row.names = TRUE)
+parameter_estimates = out$summary[1:which(rownames(out$summary) == "sat_CV"),] %>% as.data.frame()
+write.csv(parameter_estimates, file = "output_empirical/tables/parameter_estimates.csv", row.names = TRUE)
 
 #----------------------------------------------------------
 # Functions
@@ -153,7 +153,7 @@ regional_estimate_fn <- function(region_names = NA, N_samples = N_samples){
     # --------------------------------
     # Save figures
     # --------------------------------
-    tiff(filename = paste0("output_empirical/figures/REGIONAL_",region_names,"_",reg,"_2023_05_25.tif"), width = 4, height = 3, units = "in", res = 300)
+    tiff(filename = paste0("output_empirical/figures/REGIONAL_",region_names,"_",reg,".tif"), width = 4, height = 3, units = "in", res = 300)
     print(reg_plot)
     dev.off()
     
@@ -239,8 +239,8 @@ colony_summary = N_samples %>%
 #----------------------------------------------------------
 
 colony_plot <- ggplot(data = colony_summary)+
-  geom_ribbon(data = colony_summary, aes(x = year, y = N_mean, ymin = N_q05, ymax = N_q95),fill = "#0071fe", alpha = 0.3)+
-  geom_line(data = colony_summary, aes(x = year, y = N_mean),col = "#0071fe")+
+  geom_ribbon(data = colony_summary, aes(x = year, y = N_median, ymin = N_q05, ymax = N_q95),fill = "#0071fe", alpha = 0.3)+
+  geom_line(data = colony_summary, aes(x = year, y = N_median),col = "#0071fe")+
   geom_point(data = sat, aes(x = img_year, y = area_m2, shape = "Satellite count"))+
   geom_point(data = aer, aes(x = year, y = adult_count, shape = "Aerial count (adult)"))+
   
@@ -252,7 +252,7 @@ colony_plot <- ggplot(data = colony_summary)+
   facet_grid(site_id~., scales = "free_y")+
   theme_few()
 
-pdf(file = "output_empirical/figures/colony_dynamics_fitted_2023_05_25.pdf", width = 5, height = 50)
+pdf(file = "output_empirical/figures/colony_dynamics_fitted.pdf", width = 5, height = 50)
 print(colony_plot)
 dev.off()
 
@@ -267,19 +267,19 @@ aer_vs_expected_df = full_join(colony_summary, aer[,c("site_id","year","site_num
 # At some sites there are many aerial observations per year.  Calculate the mean of these for plotting
 aer_vs_expected_df = aer_vs_expected_df %>%
   group_by(site_id,year)  %>%
-  summarize(N_mean = mean(N_mean),
+  summarize(N_median = mean(N_median),
             adult_count = mean(adult_count))
 
 # Percent error
-sum_estimated = sum(aer_vs_expected_df$N_mean)
+sum_estimated = sum(aer_vs_expected_df$N_median)
 sum_observed = sum(aer_vs_expected_df$adult_count)
 percent_error = mean(100*(sum_estimated - sum_observed)/sum_observed)
 
 # Correlation
-corr = cor.test(aer_vs_expected_df$N_mean,aer_vs_expected_df$adult_count)
+corr = cor.test(aer_vs_expected_df$N_median,aer_vs_expected_df$adult_count)
 
-lim = range(aer_vs_expected_df[,c("adult_count","N_mean")])
-aerial_obs_vs_expected = ggplot(aer_vs_expected_df,aes(x = adult_count, y = N_mean)) +
+lim = range(aer_vs_expected_df[,c("adult_count","N_median")])
+aerial_obs_vs_expected = ggplot(aer_vs_expected_df,aes(x = adult_count, y = N_median)) +
   geom_abline(slope = 1, col = "gray50")+
   geom_point()+
   
@@ -295,20 +295,19 @@ aerial_obs_vs_expected
 # Plot predicted relationship between population index and satellite count
 #----------------------------------------------------------
 # Match aerial counts to estimated population indices
-sat_vs_expected_df = full_join(colony_summary, sat[,c("site_id","img_year","area_m2","img_qualit")], by = c("site_id" = "site_id", "year" = "img_year")) %>%
+sat_vs_expected_df = full_join(colony_summary, 
+                               sat[,c("site_id","img_year","area_m2","img_qualit")], 
+                               by = c("site_id" = "site_id", "year" = "img_year")) %>%
   na.omit()
 
 # At some sites there are many satial observations per year.  Calculate the mean of these for plotting
 sat_vs_expected_df = sat_vs_expected_df %>%
   group_by(site_id,year) %>%
-  summarize(N_mean = mean(N_mean),
+  summarize(N_median = mean(N_median),
             area_m2 = mean(area_m2))
 
-sat_vs_expected_df$percent_diff <- (sat_vs_expected_df$N_mean - sat_vs_expected_df$area_m2)/sat_vs_expected_df$area_m2 * 100
-subset(sat_vs_expected_df,percent_diff >= 500)
-
-lim = c(0.1,max(sat_vs_expected_df[,c("area_m2","N_mean")]))
-ggplot(sat_vs_expected_df,aes(x = area_m2, y = N_mean)) +
+lim = c(0.1,max(sat_vs_expected_df[,c("area_m2","N_median")]))
+ggplot(sat_vs_expected_df,aes(x = area_m2, y = N_median)) +
   geom_point()+
   geom_abline(slope = 1)+
   ylab("Estimated population index")+
@@ -366,7 +365,7 @@ fast_ice_reg <- regional_estimate_fn(region_names = "ice_reg", N_samples = N_sam
 pack_ice_reg <- regional_estimate_fn(region_names = "p_ice_reg", N_samples = N_samples)
 
 # Regional trends based on ccamlr regions
-#ccamlr_reg <- regional_estimate_fn(region_names = "ccamlr_reg", N_samples = N_samples)
+# ccamlr_reg <- regional_estimate_fn(region_names = "ccamlr_reg", N_samples = N_samples)
 
 #----------------------------------------------------------
 # Correlation between regional sea ice trends and population trends
@@ -394,7 +393,7 @@ sea_ice_plot <- ggplot(data = popchange_fastice,aes(x = FastIceTrend,
 print(sea_ice_plot)
 
 # Save figure
-tiff(filename = "output_empirical/figures/sea_ice_correlation_2023_05_25.tif", width = 7, height = 3.5, units = "in", res = 300)
+tiff(filename = "output_empirical/figures/sea_ice_correlation.tif", width = 7, height = 3.5, units = "in", res = 300)
 print(sea_ice_plot)
 dev.off()
 
@@ -415,7 +414,7 @@ sea_ice_plot_black <- ggplot(data = popchange_fastice,aes(x = FastIceTrend,
 print(sea_ice_plot_black)
 
 # Save figure
-tiff(filename = "output_empirical/figures/sea_ice_correlation_black_2023_05_25.tif", width = 5, height = 3.5, units = "in", res = 300)
+tiff(filename = "output_empirical/figures/sea_ice_correlation_black.tif", width = 5, height = 3.5, units = "in", res = 300)
 print(sea_ice_plot_black)
 dev.off()
 
@@ -461,9 +460,9 @@ global_trend_summary <- data.frame(Region = "Global",
                                    Estimate = global_change_trend$OLS_regression_summary) %>% 
   spread(Quantile, Estimate)
 
-write.csv(global_abundance_summary, file = "output_empirical/tables/GLOBAL_abundance_2023_05_25.csv", row.names = FALSE)
-write.csv(global_change_summary, file = "output_empirical/tables/GLOBAL_change_2023_05_25.csv", row.names = FALSE)
-write.csv(global_trend_summary, file = "output_empirical/tables/GLOBAL_trend_2023_05_25.csv", row.names = FALSE)
+write.csv(global_abundance_summary, file = "output_empirical/tables/GLOBAL_abundance.csv", row.names = FALSE)
+write.csv(global_change_summary, file = "output_empirical/tables/GLOBAL_change.csv", row.names = FALSE)
+write.csv(global_trend_summary, file = "output_empirical/tables/GLOBAL_trend.csv", row.names = FALSE)
 
 global_plot <- ggplot(global_abundance_summary, aes(x = Year, y = N_mean, ymin = N_q05, ymax = N_q95))+
   geom_ribbon(fill = "#0071fe", alpha = 0.3)+
@@ -475,7 +474,7 @@ global_plot <- ggplot(global_abundance_summary, aes(x = Year, y = N_mean, ymin =
   theme_few()
 print(global_plot)
 
-tiff(filename = "output_empirical/figures/GLOBAL_2023_05_25.tif", width = 4, height = 3, units = "in", res = 300)
+tiff(filename = "output_empirical/figures/GLOBAL.tif", width = 4, height = 3, units = "in", res = 300)
 print(global_plot)
 dev.off()
 
@@ -736,7 +735,6 @@ scale_y$label <- paste0(scale_y$percent_change,"%")
 scale_y$label[4:5] <- paste0("+",scale_y$label[4:5])
 scale_y
 
-# Plot estimates of year-to-year change at each colony
 ggplot(test2, aes(x = year_number, y = log_change_mean, ymin = log_change_q05, ymax = log_change_q95))+
   geom_point()+
   geom_errorbar(width=0)+
@@ -749,6 +747,14 @@ ggplot(test2, aes(x = year_number, y = log_change_mean, ymin = log_change_q05, y
   geom_hline(yintercept = c(log(0.75),-log(0.75)), col = "orangered", alpha = 0.25)+
   geom_hline(yintercept = 0, col = "orangered", alpha = 0.1)
 
-#----------------------------------------------------------
-# Calculate model residuals, and regress against date of survey using Dharma
-#----------------------------------------------------------
+
+# -------------------------------
+# Calculate sd of year-to-year change in global abundance
+# -------------------------------
+
+global_sd = log(out$sims.list$N_global) %>% 
+  apply(.,1,diff) %>%
+  apply(.,2,sd)
+global_sd
+
+hist(global_sd)

@@ -12,7 +12,7 @@
   logX1_sigma <- 1/pow(logX1_tau,0.5)
   
   # Spatial random effect for r_mean[s]
-  r_mean_grandmean_mu ~ dnorm(0,25)
+  r_mean_grandmean_mu ~ dnorm(0,0.2)
   r_mean_grandmean_tau ~ dgamma(0.001,0.001)
   r_mean_grandmean_sigma <- 1/pow(r_mean_grandmean_tau,0.5)
   
@@ -28,7 +28,6 @@
     
     # Median annual change at colony
     r_mean[s] ~ dnorm(r_mean_grandmean_mu,r_mean_grandmean_tau) 
-    #r_mean[s] ~ dnorm(0,25)
     
     # Population growth from year to year at colony
     for (t in 1:(n_years-1)){
@@ -60,11 +59,6 @@
   }
   
   # ------------------------------------
-  # Shared 'day of season' effect to account for phenology
-  # ------------------------------------
-  DoS_slope ~ dnorm(0,25)
-
-  # ------------------------------------
   # Aerial observation model
   # ------------------------------------
   
@@ -73,7 +67,7 @@
   
   for (i in 1:n_obs_aerial){
     
-    lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] + aerial_DoS[i]*DoS_slope - 0.5*pow(aerial_sigma,2), aerial_tau)
+    lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] - 0.5*pow(aerial_sigma,2), aerial_tau)
     adult_expected[i] <- z_occ[aerial_site[i],aerial_year[i]] * lambda[i]
     adult_count[i] ~ dpois(adult_expected[i])
     
@@ -84,16 +78,14 @@
   # ------------------------------------
   
   # Describes proportional bias (slope) and variance in satellite counts for each level of image quality (1, 2, or 3)
-  for (i in 1:3){
-    sat_slope[i] ~ dnorm(1,25)
-    sat_CV[i] ~ dunif(0,2)
-  }
-
+  sat_slope ~ dnorm(1,25)
+  sat_CV ~ dunif(0,2)
+  
   for (i in 1:n_obs_satellite){
     
     # Observation error (and bias) for satellite counts is estimated from data
-    sat_expected[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope[img_qual[i]] * exp(DoS_slope * satellite_DoS[i])
-    sat_sigma[i] <- sat_expected[i] * sat_CV[img_qual[i]] + 0.00001 # Tiny constant ensures tau is define when var is zero
+    sat_expected[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope
+    sat_sigma[i] <- sat_expected[i] * sat_CV + 0.00001 # Tiny constant ensures tau is define when var is zero
     sat_tau[i] <- pow(sat_sigma[i],-2)
     
     satellite[i] ~ dnorm(sat_expected[i], sat_tau[i])
@@ -119,7 +111,7 @@
   for (i in 1:n_obs_aerial){
   
     # Simulate aerial observations
-    sim_lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] + aerial_DoS[i]*DoS_slope - 0.5*pow(aerial_sigma,2), aerial_tau)
+    sim_lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] - 0.5*pow(aerial_sigma,2), aerial_tau)
     sim_adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * sim_lambda[i])
     
     # Calculate discrepancy measures of actual and simulated data
