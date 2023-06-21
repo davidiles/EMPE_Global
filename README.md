@@ -1,5 +1,4 @@
-# EMPE_Global
- Global analysis of emperor penguin populations
+# Global analysis of Emperor Penguin population trajectories
 
 Authors: 
 
