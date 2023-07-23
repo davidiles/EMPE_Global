@@ -1,4 +1,5 @@
 *.tif
+*.tmp
 *.png
 *.pdf
 *.RData
