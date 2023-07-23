@@ -28,7 +28,6 @@
     
     # Median annual change at colony
     r_mean[s] ~ dnorm(r_mean_grandmean_mu,r_mean_grandmean_tau) 
-    #r_mean[s] ~ dnorm(0,25)
     
     # Population growth from year to year at colony
     for (t in 1:(n_years-1)){

@@ -45,8 +45,9 @@
   for (i in 1:n_obs_aerial){
     
     # Adult counts assumed to be poisson distributed with mean centred on seasonal expected value
-    lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] - 0.5*pow(aerial_sigma,2), aerial_tau)
-    adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * lambda[i])
+    lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] + aerial_DoS[i]*DoS_slope - 0.5*pow(aerial_sigma,2), aerial_tau)
+    adult_expected[i] <- z_occ[aerial_site[i],aerial_year[i]] * lambda[i]
+    adult_count[i] ~ dpois(adult_expected[i])
     
   }
   
@@ -57,10 +58,10 @@
   for (i in 1:n_obs_satellite){
     
     # Observation error (and bias) for satellite counts is estimated from data
-    sat_mean[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope
-    sat_sigma[i] <- sat_mean[i] * sat_CV + 0.00001 # Tiny constant ensures tau is define when var is zero
+    sat_expected[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope[img_qual[i]] * exp(DoS_slope * satellite_DoS[i])
+    sat_sigma[i] <- sat_expected[i] * sat_CV[img_qual[i]] + 0.00001 # Tiny constant ensures tau is define when var is zero
     sat_tau[i] <- pow(sat_sigma[i],-2)
-    satellite[i] ~ dnorm(sat_mean[i], sat_tau[i])
+    satellite[i] ~ dnorm(sat_expected[i], sat_tau[i])
 
   }
   

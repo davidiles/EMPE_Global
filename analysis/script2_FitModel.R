@@ -16,7 +16,7 @@ my.packs <- c(
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
-setwd("~/1_Work/EMPE_Global_revised/analysis")
+setwd("~/1_Work/EMPE_Global/analysis")
 
 rm(list=ls())
 
@@ -60,7 +60,6 @@ cat("
     
     # Median annual change at colony
     r_mean[s] ~ dnorm(r_mean_grandmean_mu,r_mean_grandmean_tau) 
-    #r_mean[s] ~ dnorm(0,25)
     
     # Population growth from year to year at colony
     for (t in 1:(n_years-1)){
@@ -92,6 +91,11 @@ cat("
   }
   
   # ------------------------------------
+  # Shared 'day of season' effect to account for phenology
+  # ------------------------------------
+  DoS_slope ~ dnorm(0,25)
+
+  # ------------------------------------
   # Aerial observation model
   # ------------------------------------
   
@@ -100,7 +104,7 @@ cat("
   
   for (i in 1:n_obs_aerial){
     
-    lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] - 0.5*pow(aerial_sigma,2), aerial_tau)
+    lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] + aerial_DoS[i]*DoS_slope - 0.5*pow(aerial_sigma,2), aerial_tau)
     adult_expected[i] <- z_occ[aerial_site[i],aerial_year[i]] * lambda[i]
     adult_count[i] ~ dpois(adult_expected[i])
     
@@ -111,10 +115,6 @@ cat("
   # ------------------------------------
   
   # Describes proportional bias (slope) and variance in satellite counts for each level of image quality (1, 2, or 3)
-  #sat_slope ~ dnorm(1,25)
-  #sat_CV ~ dunif(0,2)
-
-  # Describes proportional bias (slope) and variance in satellite counts for each level of image quality (1, 2, or 3)
   for (i in 1:3){
     sat_slope[i] ~ dnorm(1,25)
     sat_CV[i] ~ dunif(0,2)
@@ -123,7 +123,7 @@ cat("
   for (i in 1:n_obs_satellite){
     
     # Observation error (and bias) for satellite counts is estimated from data
-    sat_expected[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope[img_qual[i]]
+    sat_expected[i] <- N[satellite_site[i],satellite_year[i]] * sat_slope[img_qual[i]] * exp(DoS_slope * satellite_DoS[i])
     sat_sigma[i] <- sat_expected[i] * sat_CV[img_qual[i]] + 0.00001 # Tiny constant ensures tau is define when var is zero
     sat_tau[i] <- pow(sat_sigma[i],-2)
     
@@ -150,7 +150,7 @@ cat("
   for (i in 1:n_obs_aerial){
   
     # Simulate aerial observations
-    sim_lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] - 0.5*pow(aerial_sigma,2), aerial_tau)
+    sim_lambda[i] ~ dlnorm(log_X[aerial_site[i],aerial_year[i]] + aerial_DoS[i]*DoS_slope - 0.5*pow(aerial_sigma,2), aerial_tau)
     sim_adult_count[i] ~ dpois(z_occ[aerial_site[i],aerial_year[i]] * sim_lambda[i])
     
     # Calculate discrepancy measures of actual and simulated data
@@ -188,74 +188,75 @@ inits <- function(){list(r_mean = rnorm(jags.data$n_sites,0,0.03),
                          z_occ = matrix(1,ncol = n_years, nrow = n_sites)
 )}
 
-out <- jags(data=jags.data,
-            model.file="EMPE_model_empirical.jags",
-            parameters.to.save=c(
-
-              # ------------------------
-              # Hyper-parameters
-              # ------------------------
-              "prob_occ",                # Probability colonies are "occupied"
-              "r_mean_grandmean_mu",     # Hierarchical grand mean of colony-level annual growth rates
-              "r_mean_grandmean_sigma",  # Hierarchical sd of colony-level growth rates
-              "logX1_mean",              # Hierarchical grand mean of colony-level initial abundances
-              "logX1_sigma",             # Hierarchical sd of colony-level initial abundances
-              "r_sigma",                 # Temporal variance of colony-level annual growth rates
-
-              "aerial_sigma",            # SD of aerial observations (on log scale)
-              "sat_slope",               # Bias in satellite observations
-              "sat_CV",                  # Coefficient of variation in satellite observations
-
-              # ------------------------
-              # Colony-specific quantities
-              # ------------------------
-
-              # Colony-specific mean annual differences (could be used as a measure of colony-specific "trend")
-              "r_mean",
-
-              # Colony-specific index of abundance each year
-              "N",
-
-              # ------------------------
-              # Global index and trend estimates
-              # ------------------------
-
-              # Global index of abundance each year
-              "N_global",
-
-              # Log-linear OLS slope across the study
-              "global_trend",
-
-              # ------------------------
-              # Observation-specific quantities
-              # ------------------------
-
-              # Fitted values
-              "adult_expected",
-              "sat_expected",
-              "sat_sigma",
-
-              # Discrepancy measures for posterior predictive checks
-              "RMSE_adult_count_actual",
-              "RMSE_satellite_actual",
-              "RMSE_adult_count_sim",
-              "RMSE_satellite_sim",
-
-              # Simulated datasets from fitted model (also for goodness-of-fit testing)
-              "sim_adult_count",
-              "sim_satellite"
-
-            ),
-
-            inits = inits,
-            n.chains=3,
-            n.thin = 50,
-            n.iter= 110000,
-            n.burnin= 10000,
-            parallel = TRUE)
-
-#save(out, file = "output/fitted_model.RData")
-#load(file = "output/fitted_model.RData")
+# out <- jags(data=jags.data,
+#             model.file="EMPE_model_empirical.jags",
+#             parameters.to.save=c(
+# 
+#               # ------------------------
+#               # Hyper-parameters
+#               # ------------------------
+#               "prob_occ",                # Probability colonies are "occupied"
+#               "r_mean_grandmean_mu",     # Hierarchical grand mean of colony-level annual growth rates
+#               "r_mean_grandmean_sigma",  # Hierarchical sd of colony-level growth rates
+#               "logX1_mean",              # Hierarchical grand mean of colony-level initial abundances
+#               "logX1_sigma",             # Hierarchical sd of colony-level initial abundances
+#               "r_sigma",                 # Temporal variance of colony-level annual growth rates
+# 
+#               "DoS_slope",
+#               "aerial_sigma",            # SD of aerial observations (on log scale)
+#               "sat_slope",               # Bias in satellite observations
+#               "sat_CV",                  # Coefficient of variation in satellite observations
+# 
+#               # ------------------------
+#               # Colony-specific quantities
+#               # ------------------------
+# 
+#               # Colony-specific mean annual differences (could be used as a measure of colony-specific "trend")
+#               "r_mean",
+# 
+#               # Colony-specific index of abundance each year
+#               "N",
+# 
+#               # ------------------------
+#               # Global index and trend estimates
+#               # ------------------------
+# 
+#               # Global index of abundance each year
+#               "N_global",
+# 
+#               # Log-linear OLS slope across the study
+#               "global_trend",
+# 
+#               # ------------------------
+#               # Observation-specific quantities
+#               # ------------------------
+# 
+#               # Fitted values
+#               "adult_expected",
+#               "sat_expected",
+#               "sat_sigma",
+# 
+#               # Discrepancy measures for posterior predictive checks
+#               "RMSE_adult_count_actual",
+#               "RMSE_satellite_actual",
+#               "RMSE_adult_count_sim",
+#               "RMSE_satellite_sim",
+# 
+#               # Simulated datasets from fitted model (also for goodness-of-fit testing)
+#               "sim_adult_count",
+#               "sim_satellite"
+# 
+#             ),
+# 
+#             inits = inits,
+#             n.chains=3,
+#             n.thin = 10*5,
+#             n.iter= 110000*5,
+#             n.burnin= 10000*5,
+#             parallel = TRUE)
+# 
+# save(out, file = "output/fitted_model.RData")
+load(file = "output/fitted_model.RData")
 
 # **************************************************************************************************
 # **************************************************************************************************
@@ -278,8 +279,8 @@ hyper_parameters <- c(
   "logX1_mean",             # Hierarchical grand mean of colony-level initial abundances
   "logX1_sigma",            # Hierarchical sd of colony-level initial abundances
   "r_sigma",                # Temporal variance of colony-level annual growth rates
+  "DoS_slope",              # Effect of "day of season"
   "aerial_sigma",           # SD of aerial observations (on log scale)
-  
   "sat_slope",              # Bias in satellite observations
   "sat_CV"                 # Coefficient of variation in satellite observations
   
@@ -289,7 +290,7 @@ Rhats <- unlist(out$Rhat[which(names(out$Rhat) %in% hyper_parameters)])
 mean(Rhats > 1.1, na.rm = TRUE) # Proportion of parameters with Rhat > 1.1
 max(Rhats, na.rm=TRUE) # max Rhat
 Rhats[which(Rhats > 1.1)]
-#MCMCtrace(out, params = hyper_parameters, Rhat = TRUE, filename = "output/figures_and_tables/model_checks/traceplot_hyperparams.pdf")
+MCMCtrace(out, params = hyper_parameters, Rhat = TRUE, filename = "output/model_checks/traceplot_hyperparams.pdf")
 
 indices_and_trends <- c(
   
@@ -319,7 +320,7 @@ Rhats <- unlist(out$Rhat[which(names(out$Rhat) %in% indices_and_trends)])
 mean(Rhats > 1.1, na.rm = TRUE) # Proportion of parameters with Rhat > 1.1
 max(Rhats, na.rm=TRUE) # max Rhat
 Rhats[which(Rhats > 1.1)] # N125     N353 
-#MCMCtrace(out, params = indices_and_trends, Rhat = TRUE, filename = "output/figures_and_tables/model_checks/indices_and_trends.pdf")
+MCMCtrace(out, params = indices_and_trends, Rhat = TRUE, filename = "output/model_checks/indices_and_trends.pdf")
 
 # Effective sample sizes
 n.eff <- unlist(out$n.eff)
@@ -350,7 +351,7 @@ df_sat = data.frame(actual = out$sims.list$RMSE_satellite_actual,
                     simulated = out$sims.list$RMSE_satellite_sim)
 
 plot2 <- ggplot(data = df_sat,
-               aes(x = actual, y = simulated )) +
+                aes(x = actual, y = simulated )) +
   geom_hex(binwidth = diff(lim)/50) +
   scale_fill_gradientn(colors = c("gray95","darkblue")) +
   geom_abline(intercept = 0, slope = 1)+
@@ -361,11 +362,11 @@ plot2 <- ggplot(data = df_sat,
   theme_bw()
 
 pval_plot <- ggarrange(plot1,plot2,nrow=2)
-#pval_plot
+pval_plot
 
-# png("./output/figures_and_tables/model_checks/Bayesian_pval_plot.png", width = 5, height = 7, units = "in",res=500)
-# print(pval_plot)
-# dev.off()
+png("./output/model_checks/Bayesian_pval_plot.png", width = 5, height = 7, units = "in",res=500)
+print(pval_plot)
+dev.off()
 
 # -----------------------------------------------------------------
 # Use DHARMa for residual diagnostics
@@ -376,25 +377,25 @@ sim_aerial = createDHARMa(simulatedResponse = t(out$sims.list$sim_adult_count), 
                           fittedPredictedResponse = apply(out$sims.list$adult_expected, 2, median),
                           integerResponse = T)
 
-# png("./output/figures_and_tables/model_checks/DHARMa_AdultCounts.png", width = 8, height = 5, units = "in",res=500)
-# plot(sim_aerial)
-# dev.off()
+png("./output/model_checks/DHARMa_AdultCounts.png", width = 8, height = 5, units = "in",res=500)
+plot(sim_aerial)
+dev.off()
 
 resid_aerial <- data.frame(site_id = aer$site_id,
-                       resid = residuals(sim_aerial),
-                       adult_count = aer$adult_count,
-                       Date = aer$Date,
-                       Year = aer$year,
-                       yday = aer$yday)
+                           resid = residuals(sim_aerial),
+                           adult_count = aer$adult_count,
+                           Date = aer$Date,
+                           Year = aer$year,
+                           yday = aer$yday)
 
 sim_sat = createDHARMa(simulatedResponse = t(out$sims.list$sim_satellite),
                        observedResponse = jags.data$satellite,
                        fittedPredictedResponse = apply(out$sims.list$sat_expected, 2, median),
                        integerResponse = T)
 
-# png("./output/figures_and_tables/model_checks/DHARMa_Satellite.png", width = 8, height = 5, units = "in",res=500)
-# plot(sim_sat)
-# dev.off()
+png("./output/model_checks/DHARMa_Satellite.png", width = 8, height = 5, units = "in",res=500)
+plot(sim_sat)
+dev.off()
 
 
 # **************************************************************************************************
@@ -408,7 +409,7 @@ sim_sat = createDHARMa(simulatedResponse = t(out$sims.list$sim_satellite),
 #----------------------------------------------------------
 
 parameter_estimates = out$summary[1:which(rownames(out$summary) == "sat_CV[3]"),] %>%as.data.frame()
-write.csv(parameter_estimates, file = "output/figures_and_tables/model_results/parameter_estimates.csv", row.names = TRUE)
+write.csv(parameter_estimates, file = "output/model_results/parameter_estimates.csv", row.names = TRUE)
 
 #----------------------------------------------------------
 # Function to calculate estimate of 'overall change' between endpoints (2009 and 2018) and
@@ -420,7 +421,7 @@ change_trend_fn <- function(mat){
   
   n_samps = nrow(mat)
   n_years = ncol(mat)
-
+  
   # Percent change between endpoints
   percent_change_samples <- 100*(mat[,n_years] - mat[,1])/mat[,1]
   percent_change_summary <- c(mean = mean(percent_change_samples),SE = sd(percent_change_samples), quantile(percent_change_samples,c(0.025,0.05,0.5,0.95,0.975)))
@@ -511,9 +512,9 @@ global_plot <- ggplot(global_abundance_summary, aes(x = Year, y = N_mean, ymin =
   theme_few()
 print(global_plot)
 
-#tiff(filename = "output_empirical/figures/GLOBAL.tif", width = 4, height = 3, units = "in", res = 300)
-#print(global_plot)
-#dev.off()
+tiff(filename = "output/model_results/global_trajectory.tif", width = 5, height = 4, units = "in", res = 300)
+print(global_plot)
+dev.off()
 
 #write.csv(global_abundance_summary, file = "output_empirical/tables/GLOBAL_abundance.csv", row.names = FALSE)
 #write.csv(global_change_summary, file = "output_empirical/tables/GLOBAL_change.csv", row.names = FALSE)
@@ -528,8 +529,8 @@ global_trend_summary <- data.frame(Region = "Global",
                                    Estimate = global_change_trend$OLS_regression_summary) %>% 
   spread(Quantile, Estimate)
 
-# Probability global log-linear trend is negative
-mean(global_change_trend$OLS_regression_samples<0)
+# Estimate of log-linear slope
+100*(exp(global_trend_summary[,c("2.5%","50%","97.5%")])-1)
 
 # Generation time = 16 years (Jenouvrier et al. 2014 Nature Climate Change)
 # 3 generations = 48 years
@@ -538,29 +539,25 @@ mean(global_change_trend$OLS_regression_samples<0)
 # log(0.7) = log(1) + x*(GL*3-1)
 # x = log(0.7)/(GL-1)
 GL = 16
-x = log(0.7)/(GL*3-1)
+x = log(0.5)/(GL*3-1)
 
 # Probability slope is more negative than x:
 hist(global_change_trend$OLS_regression_samples)
-mean(global_change_trend$OLS_regression_samples <= x) # 0.7245 
+mean(global_change_trend$OLS_regression_samples <= x) # 0.69
 
-#write.csv(global_trend_summary, file = "output_empirical/tables/GLOBAL_trend.csv", row.names = FALSE)
-
-# Without globally shared random effect
-global_change_summary$`97.5%`-global_change_summary$`2.5%`  # width of 95% CI = 51
-global_change_trend$OLS_regression_summary["97.5%"] - global_change_trend$OLS_regression_summary["2.5%"] # 0.0522
-
-# Region Prob_Decline Prob_30percent_Decline Prob_50percent_Decline      2.5%        5%       50%      95%    97.5%      mean       SE
-# 1 Global    0.7531667             0.01133333                      0 -27.69033 -25.24496 -8.847187 16.41082 24.22851 -7.006544 13.61402
-
+# Probability global log-linear trend is negative
+mean(global_change_trend$OLS_regression_samples<0) # 0.88
 
 # With globally shared random effect
-global_change_summary$`97.5%`-global_change_summary$`2.5%`  # width of 95% CI = 39
-global_change_trend$OLS_regression_summary["97.5%"] - global_change_trend$OLS_regression_summary["2.5%"] # 0.0438247
+global_change_summary$`97.5%`-global_change_summary$`2.5%`  # width of 95% CI = 40.3
+global_change_trend$OLS_regression_summary["97.5%"] - global_change_trend$OLS_regression_summary["2.5%"] # 0.044
 
-#Region Prob_Decline Prob_30percent_Decline Prob_50percent_Decline      2.5%        5%       50%      95%    97.5%      mean       SE
-#1 Global        0.881             0.01583333                      0 -28.62312 -26.20002 -12.54948 5.773267 10.35722 -11.66965 9.947375
+global_change_summary$`50%` # -9.6
+global_change_summary$Prob_Decline # 0.82
 
+
+
+write.csv(global_trend_summary, file = "output_empirical/tables/GLOBAL_trend.csv", row.names = FALSE)
 
 #----------------------------------------------------------
 # Calculate change since 2009 at each colony
@@ -614,92 +611,48 @@ colony_summary = N_samples %>%
   
   left_join(colony_attributes)
 
-#write.csv(colony_summary, file = "output_empirical/tables/colony_summary.csv", row.names = FALSE)
+write.csv(colony_summary, file = "output_empirical/tables/colony_summary.csv", row.names = FALSE)
 
 #----------------------------------------------------------
 # Plot dynamics within each colony
 #----------------------------------------------------------
 
-colony_plot <- ggplot(data = colony_summary)+
+aer$img_qualit = 3
+p1 <- ggplot() +
+  
+  # Fitted dynamics
   geom_ribbon(data = colony_summary, aes(x = year, y = N_median, ymin = N_q05, ymax = N_q95),fill = "#0071fe", alpha = 0.3)+
   geom_line(data = colony_summary, aes(x = year, y = N_median),col = "#0071fe")+
-  geom_point(data = sat, aes(x = year, y = area_m2, shape = "Satellite count"))+
-  geom_point(data = aer, aes(x = year, y = adult_count, shape = "Aerial count (adult)"))+
   
-  scale_shape_manual(name = 'Obs type',
-                     values =c('Satellite count'=4,'Aerial count (adult)'= 19))+
+  # Satellite observations
+  geom_vline(data = subset(sat, area_m2 == 0), aes(xintercept = year), col = "gray80", size=2)+
+  geom_point(data = sat, aes(x = year, y = area_m2, shape = "Satellite count (area in m2)", col = yday,
+                             size = factor(img_qualit)), stroke = 0.5)+
   
-  ylab("Index of abundance")+
+  # Aerial observations
+  geom_point(data = aer, aes(x = year, y = adult_count, shape = "Aerial count (adult)", col = yday,size = factor(img_qualit)))+
+  
+  # Scales
+  scale_shape_manual(name = 'Survey Type', values =c('Satellite count (area in m2)'=10,'Aerial count (adult)'= 17))+
+  scale_color_gradientn(name = 'Date of survey\n(day of year)', colors = magma(10)[1:9])+
+  scale_size_manual(values = c(0.5,1,2), name = "Image Quality",
+                    labels = c("1 - Poor","2 - Moderate","3 - Good"))+
+  scale_x_continuous(limits = range(year_range))+
+  
+  ylab("Count")+
   xlab("Year")+
-  facet_grid(site_id~., scales = "free_y")+
-  theme_few()
+  facet_wrap(site_id_factor~., scales = "free",nrow=10,ncol=5)+
+  theme_bw()+
+  geom_hline(yintercept = 0, linetype = 2, col = "transparent")
 
-png(file = "output/figures_and_tables/model_results/colony_dynamics_fitted.png", width = 5, height = 50,
-    units = "in", res = 500)
-print(colony_plot)
+png("output/model_results/colony_dynamics_fitted.png", units = "in", res = 1000, width = 20, height = 20)
+print(p1)
 dev.off()
 
-# #----------------------------------------------------------
-# # Plot observed aerial counts versus expected
-# #----------------------------------------------------------
+pdf("output/model_results/colony_dynamics_fitted.pdf", width = 20, height = 20)
+print(p1)
+dev.off()
 
-# Match aerial counts to estimated population indices
-aer_vs_expected_df = full_join(colony_summary, aer[,c("site_id","year","site_number","adult_count")]) %>%
-  na.omit()
-
-# At some sites there are many aerial observations per year.  Calculate the mean of these for plotting
-aer_vs_expected_df = aer_vs_expected_df %>%
-  group_by(site_id,year)  %>%
-  summarize(N_median = mean(N_median),
-            adult_count = mean(adult_count))
-
-# Percent error
-sum_estimated = sum(aer_vs_expected_df$N_median)
-sum_observed = sum(aer_vs_expected_df$adult_count)
-percent_error = mean(100*(sum_estimated - sum_observed)/sum_observed)
-
-# Correlation
-corr = cor.test(aer_vs_expected_df$N_median,aer_vs_expected_df$adult_count)
-
-lim = range(aer_vs_expected_df[,c("adult_count","N_median")])
-aerial_obs_vs_expected = ggplot(aer_vs_expected_df,aes(x = adult_count, y = N_median)) +
-  geom_abline(slope = 1, col = "gray50")+
-  geom_point()+
-
-  ylab("Estimated population index")+
-  xlab("Observed adult count")+
-  scale_y_continuous(trans = "log10", limits = lim)+
-  scale_x_continuous(trans = "log10", limits = lim)+
-  ggtitle(paste0("Observed adult counts vs estimated population indices\nCorrelation = ",round(corr$estimate,2)))+
-  theme_few()+
-  facet_wrap(site_id~.)
-aerial_obs_vs_expected
-
-#----------------------------------------------------------
-# Plot predicted relationship between population index and satellite count
-#----------------------------------------------------------
-
-# Match aerial counts to estimated population indices
-sat_vs_expected_df = full_join(colony_summary,
-                               sat[,c("site_id","year","area_m2","img_qualit")],
-                               by = c("site_id" = "site_id", "year" = "year")) %>%
-  na.omit()
-
-# At some sites there are many satial observations per year.  Calculate the mean of these for plotting
-sat_vs_expected_df = sat_vs_expected_df %>%
-  group_by(site_id,year) %>%
-  summarize(N_median = mean(N_median),
-            area_m2 = mean(area_m2))
-
-lim = c(0.1,max(sat_vs_expected_df[,c("area_m2","N_median")]))
-ggplot(sat_vs_expected_df,aes(x = area_m2, y = N_median)) +
-  geom_point()+
-  geom_abline(slope = 1)+
-  ylab("Estimated population index")+
-  xlab("Observed satellite count")+
-  scale_y_continuous(trans = "log10", limits = lim)+
-  scale_x_continuous(trans = "log10", limits = lim)+
-  theme_few()
 
 # #----------------------------------------------------------
 # # Plot magnitude of change at each colony on a map
@@ -737,7 +690,7 @@ ggplot(sat_vs_expected_df,aes(x = area_m2, y = N_median)) +
 # # print(trend_map)
 # # dev.off()
 # 
- 
+
 # #----------------------------------------------------------
 # # Summarize regional dynamics
 # #----------------------------------------------------------
@@ -839,7 +792,7 @@ ggplot(sat_vs_expected_df,aes(x = area_m2, y = N_median)) +
 #     # Save figures
 #     # --------------------------------
 #     
-#     tiff(filename = paste0("output/figures_and_tables/model_results/REGIONAL_",region_names,"_",reg,".tif"), width = 4, height = 3, units = "in", res = 300)
+#     tiff(filename = paste0("output/model_results/REGIONAL_",region_names,"_",reg,".tif"), width = 4, height = 3, units = "in", res = 300)
 #     print(reg_plot)
 #     dev.off()
 #     
@@ -1021,13 +974,13 @@ ggplot(colony_removal_results, aes(y = site_removed,
   #theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
   scale_color_manual(values=c(
     "#5a4ed8",
-             "#57abcf",
-             "#54edac",
-             "#feff00",
-             "#f6626d",
-             
-             "black"),
-             guide = "none")+
+    "#57abcf",
+    "#54edac",
+    "#feff00",
+    "#f6626d",
+    
+    "black"),
+    guide = "none")+
   xlab("Trend Estimate")+
   ylab("Site Omitted")+
   facet_grid(rows = vars(p_ice_reg), scales = "free_y", space = "free") +

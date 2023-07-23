@@ -241,7 +241,7 @@ p2 <- ggplot(colonies_surveyed_annual, aes(x = year, y = n, fill = survey_type))
   theme_bw()+
   ggtitle("Number of colonies surveyed per year")
 
-png("output/figures_and_tables/data_viz/p2_nsurveys.png", units = "in", res = 500, 
+png("output/data_viz/p2_nsurveys.png", units = "in", res = 500, 
     width = 8, height = 5)
 print(p2)
 dev.off()
@@ -283,7 +283,7 @@ p3_sat <- ggplot(sat_colony_months, aes(x = year, y = n, fill = month.name)) +
 # combine into single figure
 p3 <- ggarrange(p3_aer,p3_sat,nrow=2,align="hv")
 print(p3)
-png("output/figures_and_tables/data_viz/p3_survey_phenology.png", units = "in", res = 500, 
+png("output/data_viz/p3_survey_phenology.png", units = "in", res = 500, 
     width = 8, height = 8)
 print(p3)
 dev.off()
@@ -319,143 +319,10 @@ p1 <- ggplot() +
   theme_bw()+
   geom_hline(yintercept = 0, linetype = 2, col = "transparent")
 
-png("output/figures_and_tables/data_viz/p1_raw_data.png", units = "in", res = 1000, width = 20, height = 20)
+png("output/data_viz/p1_raw_data.png", units = "in", res = 1000, width = 20, height = 20)
 print(p1)
 dev.off()
 
-pdf("output/figures_and_tables/data_viz/p1_raw_data.pdf", width = 20, height = 20)
+pdf("output/data_viz/p1_raw_data.pdf", width = 20, height = 20)
 print(p1)
-dev.off()
-
-# -----------------------------------------
-# Plot seasonal data at PGEO
-# -----------------------------------------
-example_PGEO <- ggplot() +
-  
-  # Satellite observations
-  geom_point(data = subset(sat, site_id == "PGEO"), aes(x = yday, y = area_m2, shape = "Satellite count (area in m2)", col = yday,
-                             size = factor(img_qualit)), stroke = 0.5)+
-  
-  # Aerial observations
-  geom_point(data = subset(aer, site_id == "PGEO"), aes(x = yday, y = adult_count, shape = "Aerial count (adult)", col = yday,size = factor(img_qualit)))+
-  
-  # Scales
-  scale_shape_manual(name = 'Survey Type', values =c('Satellite count (area in m2)'=10,'Aerial count (adult)'= 17))+
-  scale_color_gradientn(name = 'Date of survey\n(day of year)', colors = magma(10)[1:9])+
-  scale_size_manual(values = c(0.5,1,2), name = "Image Quality",
-                    labels = c("1 - Poor","2 - Moderate","3 - Good"))+
- 
-  ylab("Count")+
-  xlab("Day of Year")+
-  facet_wrap(year~.)+
-  theme_bw()+
-  geom_hline(yintercept = 0, linetype = 2, col = "transparent")
-example_PGEO
-
-png("output/figures_and_tables/data_viz/example_PGEO.png", width = 10, height = 8, units = "in", res = 500)
-print(example_PGEO)
-dev.off()
-
-pdf("output/figures_and_tables/data_viz/example_PGEO.pdf", width = 10, height = 8)
-print(example_PGEO)
-dev.off()
-
-# -----------------------------------------
-# Plot seasonal data at ATKA
-# -----------------------------------------
-
-example_ATKA <- ggplot() +
-  
-  # Satellite observations
-  geom_point(data = subset(sat, site_id == "ATKA"), aes(x = yday, y = area_m2, shape = "Satellite count (area in m2)", col = yday,
-                                                        size = factor(img_qualit)), stroke = 0.5)+
-  
-  # Aerial observations
-  geom_point(data = subset(aer, site_id == "ATKA"), aes(x = yday, y = adult_count, shape = "Aerial count (adult)", col = yday,size = factor(img_qualit)))+
-  
-  # Scales
-  scale_shape_manual(name = 'Survey Type', values =c('Satellite count (area in m2)'=10,'Aerial count (adult)'= 17))+
-  scale_color_gradientn(name = 'Date of survey\n(day of year)', colors = magma(10)[1:9])+
-  scale_size_manual(values = c(0.5,1,2), name = "Image Quality",
-                    labels = c("1 - Poor","2 - Moderate","3 - Good"))+
-  
-  ylab("Count")+
-  xlab("Day of Year")+
-  facet_wrap(year~.)+
-  theme_bw()+
-  geom_hline(yintercept = 0, linetype = 2, col = "transparent")
-example_ATKA
-
-png("output/figures_and_tables/data_viz/example_ATKA.png", width = 10, height = 8, units = "in", res = 500)
-print(example_ATKA)
-dev.off()
-
-pdf("output/figures_and_tables/data_viz/example_ATKA.pdf", width = 10, height = 8)
-print(example_ATKA)
-dev.off()
-
-# -----------------------------------------
-# Plot seasonal data at STCB
-# -----------------------------------------
-example_STCB <- ggplot() +
-  
-  # Satellite observations
-  geom_point(data = subset(sat, site_id == "STCB" & year == 2011), aes(x = yday, y = area_m2, shape = "Satellite count (area in m2)", col = yday,
-                                                        size = factor(img_qualit)), stroke = 0.5)+
-  
-  # Aerial observations
-  #geom_point(data = subset(aer, site_id == "STCB"), aes(x = yday, y = adult_count, shape = "Aerial count (adult)", col = yday,size = factor(img_qualit)))+
-  
-  # Scales
-  scale_shape_manual(name = 'Survey Type', values =c('Satellite count (area in m2)'=10,'Aerial count (adult)'= 17))+
-  scale_color_gradientn(name = 'Date of survey\n(day of year)', colors = magma(10)[1:9])+
-  scale_size_manual(values = c(0.5,1,2), name = "Image Quality",
-                    labels = c("1 - Poor","2 - Moderate","3 - Good"))+
-  
-  ylab("Count")+
-  xlab("Day of Year")+
-  facet_wrap(year~.)+
-  theme_bw()+
-  geom_hline(yintercept = 0, linetype = 2, col = "transparent")
-example_STCB
-
-png("output/figures_and_tables/data_viz/example_STCB.png", width = 6, height = 4, units = "in", res = 500)
-print(example_STCB)
-dev.off()
-
-pdf("output/figures_and_tables/data_viz/example_STCB.pdf", width = 6, height = 4)
-print(example_STCB)
-dev.off()
-
-# -----------------------------------------
-# Plot seasonal data at COUL
-# -----------------------------------------
-example_COUL <- ggplot() +
-  
-  # Satellite observations
-  geom_point(data = subset(sat, site_id == "COUL" & year == 2011), aes(x = yday, y = area_m2, shape = "Satellite count (area in m2)", col = yday,
-                                                                       size = factor(img_qualit)), stroke = 0.5)+
-  
-  # Aerial observations
-  #geom_point(data = subset(aer, site_id == "COUL"), aes(x = yday, y = adult_count, shape = "Aerial count (adult)", col = yday,size = factor(img_qualit)))+
-  
-  # Scales
-  scale_shape_manual(name = 'Survey Type', values =c('Satellite count (area in m2)'=10,'Aerial count (adult)'= 17))+
-  scale_color_gradientn(name = 'Date of survey\n(day of year)', colors = magma(10)[1:9])+
-  scale_size_manual(values = c(0.5,1,2), name = "Image Quality",
-                    labels = c("1 - Poor","2 - Moderate","3 - Good"))+
-  
-  ylab("Count")+
-  xlab("Day of Year")+
-  facet_wrap(year~.)+
-  theme_bw()+
-  geom_hline(yintercept = 0, linetype = 2, col = "transparent")
-example_COUL
-
-png("output/figures_and_tables/data_viz/example_COUL.png", width = 6, height = 4, units = "in", res = 500)
-print(example_COUL)
-dev.off()
-
-pdf("output/figures_and_tables/data_viz/example_COUL.pdf", width = 6, height = 4)
-print(example_COUL)
 dev.off()
