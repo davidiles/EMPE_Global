@@ -17,7 +17,7 @@ my.packs <- c(
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
-setwd("~/1_Work/EMPE_Global_revised/analysis")
+setwd("~/1_Work/EMPE_Global/analysis")
 
 rm(list=ls())
 
@@ -363,6 +363,7 @@ dev.off()
 # -----------------------------------------
 # Plot seasonal data at ATKA
 # -----------------------------------------
+
 example_ATKA <- ggplot() +
   
   # Satellite observations
