@@ -322,7 +322,7 @@ Rhats <- unlist(out$Rhat[which(names(out$Rhat) %in% indices_and_trends)])
 mean(Rhats > 1.1, na.rm = TRUE) # Proportion of parameters with Rhat > 1.1
 max(Rhats, na.rm=TRUE) # max Rhat
 Rhats[which(Rhats > 1.1)] # N125     N353 
-MCMCtrace(out, params = indices_and_trends, Rhat = TRUE, filename = "output/model_checks/indices_and_trends.pdf")
+MCMCtrace(out, params = indices_and_trends, Rhat = TRUE, filename = "output/model_checks/traceplot_indices.pdf")
 
 # Effective sample sizes
 n.eff <- unlist(out$n.eff)
@@ -370,35 +370,6 @@ png("./output/model_checks/Bayesian_pval_plot.png", width = 5, height = 7, units
 print(pval_plot)
 dev.off()
 
-# -----------------------------------------------------------------
-# Use DHARMa for residual diagnostics
-# -----------------------------------------------------------------
-
-sim_aerial = createDHARMa(simulatedResponse = t(out$sims.list$sim_adult_count), # columns are posterior samples
-                          observedResponse = jags.data$adult_count,
-                          fittedPredictedResponse = apply(out$sims.list$adult_expected, 2, median),
-                          integerResponse = T)
-
-png("./output/model_checks/DHARMa_AdultCounts.png", width = 8, height = 5, units = "in",res=500)
-plot(sim_aerial)
-dev.off()
-
-resid_aerial <- data.frame(site_id = aer$site_id,
-                           resid = residuals(sim_aerial),
-                           adult_count = aer$adult_count,
-                           Date = aer$Date,
-                           Year = aer$year,
-                           yday = aer$yday)
-
-sim_sat = createDHARMa(simulatedResponse = t(out$sims.list$sim_satellite),
-                       observedResponse = jags.data$satellite,
-                       fittedPredictedResponse = apply(out$sims.list$sat_expected, 2, median),
-                       integerResponse = T)
-
-png("./output/model_checks/DHARMa_Satellite.png", width = 8, height = 5, units = "in",res=500)
-plot(sim_sat)
-dev.off()
-
 # **************************************************************************************************
 # **************************************************************************************************
 # MODEL INTERPRETATION
@@ -409,7 +380,7 @@ dev.off()
 # Output a table of parameter estimates
 #----------------------------------------------------------
 
-parameter_estimates = out$summary[1:which(rownames(out$summary) == "sat_CV[3]"),] %>%as.data.frame()
+parameter_estimates = out$summary[1:which(rownames(out$summary) == "sat_CV[3]"),] %>% as.data.frame()
 write.csv(parameter_estimates, file = "output/model_results/parameter_estimates.csv", row.names = TRUE)
 
 #----------------------------------------------------------
@@ -503,7 +474,7 @@ global_change_summary <- data.frame(Region = "Global",
                                     Estimate = global_change_trend$percent_change_summary) %>% 
   spread(Quantile, Estimate)
 
-global_plot <- ggplot(global_abundance_summary, aes(x = Year, y = N_mean, ymin = N_q05, ymax = N_q95))+
+global_plot <- ggplot(global_abundance_summary, aes(x = Year, y = N_mean, ymin = N_q025, ymax = N_q975))+
   geom_ribbon(fill = "#0071fe", alpha = 0.3)+
   geom_line(col = "#0071fe")+
   ylab("Index of abundance")+
@@ -513,7 +484,7 @@ global_plot <- ggplot(global_abundance_summary, aes(x = Year, y = N_mean, ymin =
   theme_few()
 print(global_plot)
 
-tiff(filename = "output/model_results/global_trajectory.tif", width = 5, height = 4, units = "in", res = 300)
+tiff(filename = "output/model_results/1_Global_Level/global_trajectory.tif", width = 5, height = 4, units = "in", res = 300)
 print(global_plot)
 dev.off()
 
@@ -530,20 +501,18 @@ global_trend_summary <- data.frame(Region = "Global",
 # Estimate of log-linear slope
 100*(exp(global_trend_summary[,c("2.5%","50%","97.5%")])-1)
 
-# Generation time = 16 years (Jenouvrier et al. 2014 Nature Climate Change)
-# 3 generations = 48 years
+# Generation time = 16 years (Jenouvrier et al. 2014 Nature Climate Change); 3 generations = 48 years
 
-# To achieve a 30% decline over 3 generations, log-linear trend must be at least: log(0.7) = log(1) + x*(GL*3-1)
-# x = log(0.7)/(GL*3-1)
+# To achieve a 30% decline over 3 generations, log-linear trend must be at least: log(0.7) = log(1) + x*(GL*3)
+# x = log(0.7)/(GL*3)
 GL = 16
-x = log(0.7)/(GL*3-1)
+x = log(0.7)/(GL*3)
 
 # Probability slope is more negative than x:
-hist(global_change_trend$OLS_regression_samples)
 mean(global_change_trend$OLS_regression_samples <= x) # 0.69
 
 # Probability global log-linear trend is negative
-mean(global_change_trend$OLS_regression_samples<0) # 0.88
+mean(global_change_trend$OLS_regression_samples<0) # 0.87
 
 # Credible interval width
 global_change_summary$`97.5%`-global_change_summary$`2.5%`  # width of 95% CI = 40.6
@@ -552,9 +521,9 @@ global_change_trend$OLS_regression_summary["97.5%"] - global_change_trend$OLS_re
 global_change_summary$`50%` # -9.6
 global_change_summary$Prob_Decline # 0.81
 
-write.csv(global_abundance_summary, file = "output/model_results/GLOBAL_abundance.csv", row.names = FALSE)
-write.csv(global_change_summary, file = "output/model_results/GLOBAL_change.csv", row.names = FALSE)
-write.csv(global_trend_summary, file = "output/model_results/GLOBAL_trend.csv", row.names = FALSE)
+write.csv(global_abundance_summary, file = "output/model_results/1_Global_Level/GLOBAL_abundance.csv", row.names = FALSE)
+write.csv(global_change_summary, file = "output/model_results/1_Global_Level/GLOBAL_change.csv", row.names = FALSE)
+write.csv(global_trend_summary, file = "output/model_results/1_Global_Level/GLOBAL_trend.csv", row.names = FALSE)
 
 #----------------------------------------------------------
 # Calculate change since 2009 at each colony
@@ -608,7 +577,7 @@ colony_summary = N_samples %>%
   
   left_join(colony_attributes)
 
-write.csv(colony_summary, file = "output/model_results/colony_summary.csv", row.names = FALSE)
+write.csv(colony_summary, file = "output/model_results/3_Colony_Level/colony_summary.csv", row.names = FALSE)
 
 #----------------------------------------------------------
 # Plot dynamics within each colony
@@ -642,188 +611,235 @@ p1 <- ggplot() +
   theme_bw()+
   geom_hline(yintercept = 0, linetype = 2, col = "transparent")
 
-png("output/model_results/colony_dynamics_fitted.png", units = "in", res = 1000, width = 20, height = 20)
+png("output/model_results/3_Colony_Level/colony_dynamics_fitted.png", units = "in", res = 1000, width = 20, height = 20)
 print(p1)
 dev.off()
 
-pdf("output/model_results/colony_dynamics_fitted.pdf", width = 20, height = 20)
+pdf("output/model_results/3_Colony_Level/colony_dynamics_fitted.pdf", width = 20, height = 20)
 print(p1)
 dev.off()
 
 
-# #----------------------------------------------------------
-# # Summarize regional dynamics
-# #----------------------------------------------------------
-# 
-# #----------------------------------------------------------
-# # Function to calculate regional indices, and change/trend estimates for
-# #    any grouping of colonies (e.g., based on fast ice regions, ccamlr sectors, 
-# #    colonies inside/outside protected areas, etc)
-# #----------------------------------------------------------
-# 
-# # Accepts an n_samp x n_year matrix of abundance estimates
-# regional_estimate_fn <- function(region_names = NA, N_samples = N_samples){
-#   
-#   tmp <- colony_attributes[,c("site_id","site_name","site_number")]
-#   tmp$region <- colony_attributes[,region_names]
-#   
-#   N_region <- N_samples %>% 
-#     left_join(tmp)%>%
-#     group_by(region,mcmc_sample,year) %>%
-#     summarize(N = sum(N))
-#   
-#   regional_abundance_summary <- N_region %>%
-#     group_by(region,year) %>%
-#     summarize(N_mean = mean(N),
-#               N_se = sd(N),
-#               N_q025 = quantile(N,0.025),
-#               N_q05 = quantile(N,0.05),
-#               N_median = median(N),
-#               N_q95 = quantile(N,0.95),
-#               N_q975 = quantile(N,0.975))
-#   
-#   n_reg <- length(unique(N_region$region))
-#   regional_trend_summary <- data.frame()
-#   regional_change_summary <- data.frame()
-#   regional_trend_samples <- vector(mode = "list", length = 0)
-#   regional_change_samples <- vector(mode = "list", length = 0)
-#   
-#   for (i in 1:n_reg){
-#     
-#     reg <- unique(N_region$region)[i]
-#     N_reg_matrix = N_region %>% 
-#       subset(region == reg) %>%
-#       spread(year, N) %>%
-#       ungroup() %>%
-#       dplyr::select(-region,-mcmc_sample) %>%
-#       as.matrix()
-#     
-#     # Estimates of change/trend
-#     reg_change_trend <- change_trend_fn(N_reg_matrix)
-#     
-#     regional_change_samples[[i]] <- reg_change_trend$percent_change_samples
-#     regional_trend_samples[[i]] <- reg_change_trend$OLS_regression_samples
-#     
-#     regional_change_summary <- rbind(regional_change_summary, 
-#                                      data.frame(Region = reg,
-#                                                 Prob_Decline = reg_change_trend$prob_decline,
-#                                                 Prob_30percent_Decline = reg_change_trend$prob_30percent_decline,
-#                                                 Prob_50percent_Decline = reg_change_trend$prob_50percent_decline,
-#                                                 Quantile = names(reg_change_trend$percent_change_summary),
-#                                                 Estimate = reg_change_trend$percent_change_summary) %>%
-#                                        spread(Quantile, Estimate))
-#     
-#     regional_trend_summary <- rbind(regional_trend_summary, 
-#                                     data.frame(Region = reg,
-#                                                Quantile = names(reg_change_trend$OLS_regression_summary),
-#                                                Estimate = reg_change_trend$OLS_regression_summary) %>%
-#                                       spread(Quantile, Estimate))
-#     
-#     
-#   }
-#   
-#   # --------------------------------
-#   # Save summary tables
-#   # --------------------------------
-#   
-#   #write.csv(regional_abundance_summary, file = paste0("output/model_results/REGIONAL_abundance_",region_names,".csv"), row.names = FALSE)
-#   #write.csv(regional_change_summary, file = paste0("output/model_results/REGIONAL_change_",region_names,".csv"), row.names = FALSE)
-#   #write.csv(regional_trend_summary, file = paste0("output/model_results/REGIONAL_trend_",region_names,".csv"), row.names = FALSE)
-#   
-#   # --------------------------------
-#   # Generate separate plots for each region
-#   # --------------------------------
-#   region_plots <- vector(mode = "list", length = 0)
-#   
-#   for (i in 1:n_reg){
-#     
-#     reg <- unique(N_region$region)[i]
-#     
-#     reg_plot <- ggplot(subset(regional_abundance_summary, region == reg), aes(x = year, y = N_mean, ymin = N_q05, ymax = N_q95))+
-#       geom_ribbon(fill = "#0071fe", alpha = 0.3)+
-#       geom_line(col = "#0071fe")+
-#       ylab("Index of abundance")+
-#       xlab("Year")+
-#       ggtitle(reg)+
-#       theme_few()
-#     region_plots[[i]] <- reg_plot
-#     
-#     # --------------------------------
-#     # Save figures
-#     # --------------------------------
-#     
-#     tiff(filename = paste0("output/model_results/REGIONAL_",region_names,"_",reg,".tif"), width = 4, height = 3, units = "in", res = 300)
-#     print(reg_plot)
-#     dev.off()
-#     
-#   }
-#   
-#   names(regional_change_samples) <- names(regional_trend_samples) <- names(region_plots) <- unique(N_region$region)
-#   
-#   return(list(regional_abundance_summary = regional_abundance_summary,
-#               regional_trend_summary = regional_trend_summary,
-#               regional_change_summary = regional_change_summary,
-#               regional_trend_samples = regional_trend_samples,
-#               regional_change_samples = regional_change_samples,
-#               region_plots = region_plots))
-# }
+#----------------------------------------------------------
+# Summarize regional dynamics
+#----------------------------------------------------------
 
-# # Regional trends based on fast ice regions
-# fast_ice_reg <- regional_estimate_fn(region_names = "ice_reg", N_samples = N_samples)
-# 
-# # Regional trends based on pack ice regions
-# pack_ice_reg <- regional_estimate_fn(region_names = "p_ice_reg", N_samples = N_samples)
+#----------------------------------------------------------
+# Function to calculate regional indices, and change/trend estimates for
+#    any grouping of colonies (e.g., based on fast ice regions, ccamlr sectors,
+#    colonies inside/outside protected areas, etc)
+#----------------------------------------------------------
 
-# #----------------------------------------------------------
-# # Correlation between regional sea ice trends and population trends
-# #----------------------------------------------------------
-# 
-# icetrend <- read.csv("../data/fast_ice_trends.csv")
-# popchange_fastice = fast_ice_reg$regional_change_summary %>% full_join(icetrend)
-# 
-# nameColor <- bquote(atop(Minimum~fast,
-#                          ice~extent~(km^2)))
-# 
-# sea_ice_plot <- ggplot(data = popchange_fastice,aes(x = FastIceTrend, 
-#                                                     y = Prob_Decline, 
-#                                                     col = FastIceExtent_min*1000,
-#                                                     label = Region)) + 
-#   geom_point(size = 2)+
-#   geom_text_repel(col = "gray70", size = 1.5, hjust = 0,direction = "x")+
-#   scale_color_gradientn(colors = c("gray90","blue"))+
-#   xlab("Fast ice trend\n(% change per year)")+
-#   ylab("Probability of population decline")+
-#   coord_cartesian(xlim = c(-3.2,3.2))+
-#   theme_few()+
-#   labs(color = nameColor)+
-#   theme(legend.position = "right")
-# print(sea_ice_plot)
-# 
-# # Save figure
-# tiff(filename = "output_empirical/figures/sea_ice_correlation.tif", width = 7, height = 3.5, units = "in", res = 300)
-# print(sea_ice_plot)
-# dev.off()
-# 
-# rho = DescTools::SpearmanRho(popchange_fastice$Prob_Decline,popchange_fastice$FastIceTrend,conf.level = 0.95)
-# rho
-# 
-# sea_ice_plot_black <- ggplot(data = popchange_fastice,aes(x = FastIceTrend, 
-#                                                           y = Prob_Decline, 
-#                                                           label = Region)) + 
-#   geom_point(size = 2)+
-#   geom_text_repel(col = "gray70", size = 1.5, hjust = 0,direction = "x")+
-#   xlab("Fast ice trend\n(% change per year)")+
-#   ylab("Probability of population decline")+
-#   coord_cartesian(xlim = c(-3.2,3.2))+
-#   theme_few()+
-#   labs(color = nameColor)+
-#   theme(legend.position = "right")
-# print(sea_ice_plot_black)
-# 
-# # Save figure
-# tiff(filename = "output_empirical/figures/sea_ice_correlation_black.tif", width = 5, height = 3.5, units = "in", res = 300)
-# print(sea_ice_plot_black)
-# dev.off()
+# Accepts an n_samp x n_year matrix of abundance estimates
+regional_estimate_fn <- function(region_names = NA, 
+                                 region_colors = NA,
+                                 N_samples = N_samples){
+  
+  tmp <- colony_attributes[,c("site_id","site_name","site_number")]
+  tmp$region <- colony_attributes[,region_names]
+  
+  N_region <- N_samples %>%
+    left_join(tmp)%>%
+    group_by(region,mcmc_sample,year) %>%
+    summarize(N = sum(N))
+  
+  regional_abundance_summary <- N_region %>%
+    group_by(region,year) %>%
+    summarize(N_mean = mean(N),
+              N_se = sd(N),
+              N_q025 = quantile(N,0.025),
+              N_q05 = quantile(N,0.05),
+              N_median = median(N),
+              N_q95 = quantile(N,0.95),
+              N_q975 = quantile(N,0.975))
+  
+  n_reg <- length(unique(N_region$region))
+  regional_trend_summary <- data.frame()
+  regional_change_summary <- data.frame()
+  regional_trend_samples <- vector(mode = "list", length = 0)
+  regional_change_samples <- vector(mode = "list", length = 0)
+  
+  for (i in 1:n_reg){
+    
+    reg <- unique(N_region$region)[i]
+    N_reg_matrix = N_region %>%
+      subset(region == reg) %>%
+      spread(year, N) %>%
+      ungroup() %>%
+      dplyr::select(-region,-mcmc_sample) %>%
+      as.matrix()
+    
+    # Estimates of change/trend
+    reg_change_trend <- change_trend_fn(N_reg_matrix)
+    
+    regional_change_samples[[i]] <- reg_change_trend$percent_change_samples
+    regional_trend_samples[[i]] <- reg_change_trend$OLS_regression_samples
+    
+    regional_change_summary <- rbind(regional_change_summary,
+                                     data.frame(Region = reg,
+                                                Prob_Decline = reg_change_trend$prob_decline,
+                                                Prob_30percent_Decline = reg_change_trend$prob_30percent_decline,
+                                                Prob_50percent_Decline = reg_change_trend$prob_50percent_decline,
+                                                Quantile = names(reg_change_trend$percent_change_summary),
+                                                Estimate = reg_change_trend$percent_change_summary) %>%
+                                       spread(Quantile, Estimate))
+    
+    regional_trend_summary <- rbind(regional_trend_summary,
+                                    data.frame(Region = reg,
+                                               Quantile = names(reg_change_trend$OLS_regression_summary),
+                                               Estimate = reg_change_trend$OLS_regression_summary) %>%
+                                      spread(Quantile, Estimate))
+    
+    
+  }
+  
+  # --------------------------------
+  # Save summary tables
+  # --------------------------------
+  
+  write.csv(regional_abundance_summary, file = paste0("output/model_results/2_Regional_Level/summary_REGIONAL_",region_names,"abundance.csv"), row.names = FALSE)
+  write.csv(regional_change_summary, file = paste0("output/model_results/2_Regional_Level/summary_REGIONAL_",region_names,"_change.csv"), row.names = FALSE)
+  write.csv(regional_trend_summary, file = paste0("output/model_results/2_Regional_Level/summary_REGIONAL_",region_names,"_trend.csv"), row.names = FALSE)
+  
+  # --------------------------------
+  # Generate separate plots for each region
+  # --------------------------------
+  region_plots <- vector(mode = "list", length = 0)
+  
+  for (i in 1:n_reg){
+    
+    reg <- unique(N_region$region)[i]
+    
+    regional_abundance_summary$region <- factor(regional_abundance_summary$region, levels = names(region_colors))
+    
+    fill_col <- region_colors[reg]
+    reg_plot1 <- ggplot()+
+      
+      geom_ribbon(data = subset(regional_abundance_summary, region == reg),
+                  aes(x = year, y = N_mean, ymin = N_q025, ymax = N_q975),
+                  fill = fill_col,alpha = 0.3)+
+      geom_line(data = subset(regional_abundance_summary, region == reg),
+                aes(x = year, y = N_median),
+                col = "black")+
+      
+      geom_line(data = subset(regional_abundance_summary, region == reg),
+                aes(x = year, y = N_q025),
+                col = "black")+
+      geom_line(data = subset(regional_abundance_summary, region == reg),
+                aes(x = year, y = N_q975),
+                col = "black")+
+      ylab("Index of abundance")+
+      xlab("Year")+
+      ggtitle(reg)+
+      guides(fill="none", col = "none")+
+      theme_few()
+    region_plots[[i]] <- reg_plot1
+    
+    lim <- c(0,max(regional_abundance_summary$N_q975))
+    reg_plot2 <- ggplot()+
+      geom_ribbon(data = subset(regional_abundance_summary, region == reg),
+                  aes(x = year, y = N_mean, ymin = N_q025, ymax = N_q975),
+                  fill = fill_col,alpha = 0.3)+
+      geom_line(data = subset(regional_abundance_summary, region == reg),
+                aes(x = year, y = N_median),
+                col = "black")+
+      
+      geom_line(data = subset(regional_abundance_summary, region == reg),
+                aes(x = year, y = N_q025),
+                col = "black")+
+      geom_line(data = subset(regional_abundance_summary, region == reg),
+                aes(x = year, y = N_q975),
+                col = "black")+
+      
+      ylab("Index of abundance")+
+      xlab("Year")+
+      ggtitle(reg)+
+      guides(fill="none", col = "none")+
+      scale_y_continuous(limits = lim)+
+      theme_few()
+    
+    # --------------------------------
+    # Save figures
+    # --------------------------------
+    
+    tiff(filename = paste0("output/model_results/2_Regional_Level/REGIONAL_",region_names,"_CustomYAxis_",reg,".tif"), width = 4, height = 3, units = "in", res = 300)
+    print(reg_plot1)
+    dev.off()
+    
+    tiff(filename = paste0("output/model_results/2_Regional_Level/REGIONAL_",region_names,"_FixedYAxis",reg,".tif"), width = 4, height = 3, units = "in", res = 300)
+    print(reg_plot2)
+    dev.off()
+    
+  }
+  
+  names(regional_change_samples) <- names(regional_trend_samples) <- names(region_plots) <- unique(N_region$region)
+  
+  return(list(regional_abundance_summary = regional_abundance_summary,
+              regional_trend_summary = regional_trend_summary,
+              regional_change_summary = regional_change_summary,
+              regional_trend_samples = regional_trend_samples,
+              regional_change_samples = regional_change_samples,
+              region_plots = region_plots))
+}
+
+# Regional trends based on fast ice regions
+fast_ice_reg <- regional_estimate_fn(region_names = "ice_reg", 
+                                     region_colors = c("Amundsen Sea" = "#686868",
+                                                       "Australia" = "#dcdcdc",
+                                                       "Bellingshausen Sea" = "#feaa02",
+                                                       "Dronning Maud Land" = "#00a884",
+                                                       "East Indian Ocean" = "#1558bf",
+                                                       "Victoria Oates Land" = "#ff73de",
+                                                       "Weddell Sea" = "#01c5ff",
+                                                       "West Indian Ocean" = "#ffff00"), 
+                                     N_samples = N_samples)
+
+# Regional trends based on pack ice regions
+pack_ice_reg <- regional_estimate_fn(region_names = "p_ice_reg",
+                                     region_colors = c("Ross" = "#5a4dd8",
+                                                       "Bell-Amundsen" = "#57abce",
+                                                       "Weddell" = "#54edac",
+                                                       "Indian" = "#ffff00",
+                                                       "Pacific" = "#f6636d"), 
+                                     N_samples = N_samples)
+
+#----------------------------------------------------------
+# Correlation between regional sea ice trends and population trends
+#----------------------------------------------------------
+
+icetrend <- read.csv("../data/fast_ice_trends.csv")
+popchange_fastice = fast_ice_reg$regional_change_summary %>% full_join(icetrend)
+
+nameColor <- bquote(atop(Minimum~fast,
+                         ice~extent~(km^2)))
+
+sea_ice_plot <- ggplot(data = popchange_fastice,aes(x = FastIceTrend,
+                                                    y = Prob_Decline,
+                                                    col = FastIceExtent_min*1000,
+                                                    label = Region)) +
+  geom_point(size = 2)+
+  geom_text(data = popchange_fastice,aes(x = FastIceTrend,
+                                               y = Prob_Decline,
+                                               col = FastIceExtent_min*1000,
+                                               label = Region),
+                  col = "gray70", size = 2, hjust = 1.1)+
+  #scale_color_gradientn(colors = c("gray90","blue"))+
+  scale_color_gradientn(colors = rev(inferno(50)[12:40]))+
+  xlab("Fast ice trend\n(% change per year)")+
+  ylab("Probability of population decline")+
+  coord_cartesian(xlim = c(-3.2,3.2))+
+  theme_few()+
+  labs(color = nameColor)+
+  theme(legend.position = "right")
+print(sea_ice_plot)
+
+# Save figure
+tiff(filename = "output/model_results/2_Regional_Level/sea_ice_correlation.tif", width = 7, height = 3.5, units = "in", res = 300)
+print(sea_ice_plot)
+dev.off()
+
+rho = DescTools::SpearmanRho(popchange_fastice$Prob_Decline,popchange_fastice$FastIceTrend,conf.level = 0.95)
+rho
 
 # ***************************************************************************
 # ***************************************************************************
@@ -1057,3 +1073,33 @@ dev.off()
 # 
 # # Probability the population will decline by more than 30% (Vulnerable)
 # mean(IUCN_3generation <= 70)
+# 
+# # -----------------------------------------------------------------
+# # Use DHARMa for residual diagnostics
+# # -----------------------------------------------------------------
+# # NOTE: these were not especially useful because shrinkage of random effects in model
+# #       leads to apparent discrepancies in 
+# sim_aerial = createDHARMa(simulatedResponse = t(out$sims.list$sim_adult_count), # columns are posterior samples
+#                           observedResponse = jags.data$adult_count,
+#                           fittedPredictedResponse = apply(out$sims.list$adult_expected, 2, median),
+#                           integerResponse = T)
+# 
+# png("./output/model_checks/DHARMa_AdultCounts.png", width = 8, height = 5, units = "in",res=500)
+# plot(sim_aerial)
+# dev.off()
+# 
+# resid_aerial <- data.frame(site_id = aer$site_id,
+#                            resid = residuals(sim_aerial),
+#                            adult_count = aer$adult_count,
+#                            Date = aer$Date,
+#                            Year = aer$year,
+#                            yday = aer$yday)
+# 
+# sim_sat = createDHARMa(simulatedResponse = t(out$sims.list$sim_satellite),
+#                        observedResponse = jags.data$satellite,
+#                        fittedPredictedResponse = apply(out$sims.list$sat_expected, 2, median),
+#                        integerResponse = T)
+# 
+# png("./output/model_checks/DHARMa_Satellite.png", width = 8, height = 5, units = "in",res=500)
+# plot(sim_sat)
+# dev.off()
