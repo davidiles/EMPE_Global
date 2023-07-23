@@ -370,6 +370,37 @@ png("./output/model_checks/Bayesian_pval_plot.png", width = 5, height = 7, units
 print(pval_plot)
 dev.off()
 
+# -----------------------------------------------------------------
+# Use DHARMa for residual diagnostics
+# -----------------------------------------------------------------
+# NOTE: these were not especially useful because shrinkage of random effects in model
+#       leads to pattern in residual vs predicted (see discussion of this on https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html)
+#      - note some evidence of *under*dispersion in counts, likely caused by within-season autocorrelation
+sim_aerial = createDHARMa(simulatedResponse = t(out$sims.list$sim_adult_count), # columns are posterior samples
+                          observedResponse = jags.data$adult_count,
+                          fittedPredictedResponse = apply(out$sims.list$adult_expected, 2, median),
+                          integerResponse = T)
+
+png("./output/model_checks/DHARMa_AdultCounts.png", width = 8, height = 5, units = "in",res=500)
+plot(sim_aerial)
+dev.off()
+
+resid_aerial <- data.frame(site_id = aer$site_id,
+                           resid = residuals(sim_aerial),
+                           adult_count = aer$adult_count,
+                           Date = aer$Date,
+                           Year = aer$year,
+                           yday = aer$yday)
+
+sim_sat = createDHARMa(simulatedResponse = t(out$sims.list$sim_satellite),
+                       observedResponse = jags.data$satellite,
+                       fittedPredictedResponse = apply(out$sims.list$sat_expected, 2, median),
+                       integerResponse = T)
+
+png("./output/model_checks/DHARMa_Satellite.png", width = 8, height = 5, units = "in",res=500)
+plot(sim_sat)
+dev.off()
+
 # **************************************************************************************************
 # **************************************************************************************************
 # MODEL INTERPRETATION
@@ -1073,33 +1104,3 @@ rho
 # 
 # # Probability the population will decline by more than 30% (Vulnerable)
 # mean(IUCN_3generation <= 70)
-# 
-# # -----------------------------------------------------------------
-# # Use DHARMa for residual diagnostics
-# # -----------------------------------------------------------------
-# # NOTE: these were not especially useful because shrinkage of random effects in model
-# #       leads to apparent discrepancies in 
-# sim_aerial = createDHARMa(simulatedResponse = t(out$sims.list$sim_adult_count), # columns are posterior samples
-#                           observedResponse = jags.data$adult_count,
-#                           fittedPredictedResponse = apply(out$sims.list$adult_expected, 2, median),
-#                           integerResponse = T)
-# 
-# png("./output/model_checks/DHARMa_AdultCounts.png", width = 8, height = 5, units = "in",res=500)
-# plot(sim_aerial)
-# dev.off()
-# 
-# resid_aerial <- data.frame(site_id = aer$site_id,
-#                            resid = residuals(sim_aerial),
-#                            adult_count = aer$adult_count,
-#                            Date = aer$Date,
-#                            Year = aer$year,
-#                            yday = aer$yday)
-# 
-# sim_sat = createDHARMa(simulatedResponse = t(out$sims.list$sim_satellite),
-#                        observedResponse = jags.data$satellite,
-#                        fittedPredictedResponse = apply(out$sims.list$sat_expected, 2, median),
-#                        integerResponse = T)
-# 
-# png("./output/model_checks/DHARMa_Satellite.png", width = 8, height = 5, units = "in",res=500)
-# plot(sim_sat)
-# dev.off()
