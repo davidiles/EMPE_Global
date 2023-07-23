@@ -11,7 +11,7 @@ my.packs <- c(
   'rgeos','raster','sp','sf',
   
   # Plotting
-  'ggrepel','ggthemes','ggpubr','scales')
+  'ggrepel','ggthemes','ggpubr','scales','viridis')
 
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
@@ -258,6 +258,8 @@ inits <- function(){list(r_mean = rnorm(jags.data$n_sites,0,0.03),
 # save(out, file = "output/fitted_model.RData")
 load(file = "output/fitted_model.RData")
 
+
+
 # **************************************************************************************************
 # **************************************************************************************************
 # MODEL CONVERGENCE AND GOODNESS-OF-FIT
@@ -324,7 +326,7 @@ MCMCtrace(out, params = indices_and_trends, Rhat = TRUE, filename = "output/mode
 
 # Effective sample sizes
 n.eff <- unlist(out$n.eff)
-n.eff[n.eff > 1 & n.eff <= 2000] # Parameters with fewer than 1000 samples
+n.eff[n.eff > 1 & n.eff <= 2000] # Parameters with fewer than 2000 samples
 
 #----------------------------------------------------------
 # Posterior predictive checks
@@ -397,7 +399,6 @@ png("./output/model_checks/DHARMa_Satellite.png", width = 8, height = 5, units =
 plot(sim_sat)
 dev.off()
 
-
 # **************************************************************************************************
 # **************************************************************************************************
 # MODEL INTERPRETATION
@@ -413,7 +414,7 @@ write.csv(parameter_estimates, file = "output/model_results/parameter_estimates.
 
 #----------------------------------------------------------
 # Function to calculate estimate of 'overall change' between endpoints (2009 and 2018) and
-#   log-linear slope (measure of trend) across study
+#   log-linear slope (a measure of trend) across study
 #----------------------------------------------------------
 
 # Accepts an n_samp x n_year matrix of abundance estimates
@@ -455,7 +456,7 @@ change_trend_fn <- function(mat){
 }
 
 #----------------------------------------------------------
-# Convert colony-level mcmc samples to dataframe
+# Convert colony-level abundance mcmc samples to dataframe
 #----------------------------------------------------------
 
 N_samples <- out$sims.list$N %>% 
@@ -516,11 +517,8 @@ tiff(filename = "output/model_results/global_trajectory.tif", width = 5, height 
 print(global_plot)
 dev.off()
 
-#write.csv(global_abundance_summary, file = "output_empirical/tables/GLOBAL_abundance.csv", row.names = FALSE)
-#write.csv(global_change_summary, file = "output_empirical/tables/GLOBAL_change.csv", row.names = FALSE)
-
 #----------------------------------------------------------
-# Contextualize log-linear trend
+# Contextualize global log-linear trend estimate
 #----------------------------------------------------------
 
 # Log-linear slope from 2009 to 2018
@@ -535,11 +533,10 @@ global_trend_summary <- data.frame(Region = "Global",
 # Generation time = 16 years (Jenouvrier et al. 2014 Nature Climate Change)
 # 3 generations = 48 years
 
-# To achieve a 30% decline over 48 years, log-linear trend must be at least:
-# log(0.7) = log(1) + x*(GL*3-1)
-# x = log(0.7)/(GL-1)
+# To achieve a 30% decline over 3 generations, log-linear trend must be at least: log(0.7) = log(1) + x*(GL*3-1)
+# x = log(0.7)/(GL*3-1)
 GL = 16
-x = log(0.5)/(GL*3-1)
+x = log(0.7)/(GL*3-1)
 
 # Probability slope is more negative than x:
 hist(global_change_trend$OLS_regression_samples)
@@ -548,16 +545,16 @@ mean(global_change_trend$OLS_regression_samples <= x) # 0.69
 # Probability global log-linear trend is negative
 mean(global_change_trend$OLS_regression_samples<0) # 0.88
 
-# With globally shared random effect
-global_change_summary$`97.5%`-global_change_summary$`2.5%`  # width of 95% CI = 40.3
+# Credible interval width
+global_change_summary$`97.5%`-global_change_summary$`2.5%`  # width of 95% CI = 40.6
 global_change_trend$OLS_regression_summary["97.5%"] - global_change_trend$OLS_regression_summary["2.5%"] # 0.044
 
 global_change_summary$`50%` # -9.6
-global_change_summary$Prob_Decline # 0.82
+global_change_summary$Prob_Decline # 0.81
 
-
-
-write.csv(global_trend_summary, file = "output_empirical/tables/GLOBAL_trend.csv", row.names = FALSE)
+write.csv(global_abundance_summary, file = "output/model_results/GLOBAL_abundance.csv", row.names = FALSE)
+write.csv(global_change_summary, file = "output/model_results/GLOBAL_change.csv", row.names = FALSE)
+write.csv(global_trend_summary, file = "output/model_results/GLOBAL_trend.csv", row.names = FALSE)
 
 #----------------------------------------------------------
 # Calculate change since 2009 at each colony
@@ -611,7 +608,7 @@ colony_summary = N_samples %>%
   
   left_join(colony_attributes)
 
-write.csv(colony_summary, file = "output_empirical/tables/colony_summary.csv", row.names = FALSE)
+write.csv(colony_summary, file = "output/model_results/colony_summary.csv", row.names = FALSE)
 
 #----------------------------------------------------------
 # Plot dynamics within each colony
@@ -653,43 +650,6 @@ pdf("output/model_results/colony_dynamics_fitted.pdf", width = 20, height = 20)
 print(p1)
 dev.off()
 
-
-# #----------------------------------------------------------
-# # Plot magnitude of change at each colony on a map
-# #----------------------------------------------------------
-# 
-# # # Change categories (>100% decrease,50-100% decrease, 0-50% decrease, 0-50% increase, 50-100% increase)
-# # df_2009 = subset(colony_summary, year == 2009)
-# # df_2018 = subset(colony_summary, year == 2018)
-# # world <- map_data("world")
-# # lim <- max(abs(df_2018$change_since_2009_mean),na.rm = TRUE)
-# # 
-# # trend_map <- ggplot(world, aes(x=long, y=lat, group=group)) +
-# #   geom_polygon(fill = "gray95", col = "gray55",alpha=0.5) +
-# #   scale_y_continuous(breaks=(-2:2) * 30, limits = c(-90,-60)) +
-# #   scale_x_continuous(breaks=(-4:4) * 45) +
-# #   coord_map("ortho", orientation=c(-90, 0, 0)) +
-# #   theme_bw()+
-# #   theme(axis.text = element_blank(),
-# #         axis.title = element_blank(),
-# #         axis.ticks=element_blank(),
-# #         panel.border = element_blank()) +
-# #   geom_point(data = df_2018,
-# #              aes(x=lon, y=lat,group=1,
-# #                  col = change_since_2009_mean#,size = change_since_2009_mean
-# #                  ))+
-# #   geom_label_repel(data = df_2018,aes(x=lon, y=lat,group=1,
-# #                                       label = site_id,
-# #                                       col = change_since_2009_mean
-# #                                       ))+
-# #   scale_color_gradientn(colors = c("red","gray90","blue"),limits = c(-lim,lim), name = "Change since 2009")+
-# #   scale_size_continuous(name = "Change since 2009")
-# # print(trend_map)
-# # 
-# # pdf(file = "./output_empirical/FigX_trend_map.pdf", width = 8, height = 8)
-# # print(trend_map)
-# # dev.off()
-# 
 
 # #----------------------------------------------------------
 # # Summarize regional dynamics
@@ -766,9 +726,9 @@ dev.off()
 #   # Save summary tables
 #   # --------------------------------
 #   
-#   #write.csv(regional_abundance_summary, file = paste0("output_empirical/tables/REGIONAL_abundance_",region_names,".csv"), row.names = FALSE)
-#   #write.csv(regional_change_summary, file = paste0("output_empirical/tables/REGIONAL_change_",region_names,".csv"), row.names = FALSE)
-#   #write.csv(regional_trend_summary, file = paste0("output_empirical/tables/REGIONAL_trend_",region_names,".csv"), row.names = FALSE)
+#   #write.csv(regional_abundance_summary, file = paste0("output/model_results/REGIONAL_abundance_",region_names,".csv"), row.names = FALSE)
+#   #write.csv(regional_change_summary, file = paste0("output/model_results/REGIONAL_change_",region_names,".csv"), row.names = FALSE)
+#   #write.csv(regional_trend_summary, file = paste0("output/model_results/REGIONAL_trend_",region_names,".csv"), row.names = FALSE)
 #   
 #   # --------------------------------
 #   # Generate separate plots for each region
@@ -865,194 +825,235 @@ dev.off()
 # print(sea_ice_plot_black)
 # dev.off()
 
-#----------------------------------------------------------
-# Estimate change over 3 generations and IUCN thresholds
-# Generation time = 16 years (Jenouvrier et al. 2014 Nature Climate Change)
-# 3 generations = 48 years
-#----------------------------------------------------------
+# ***************************************************************************
+# ***************************************************************************
+# DEPRECATED CODE THAT COULD BE USEFUL FOR VISUALIZING/INTERPRETING DYNAMICS
+# ***************************************************************************
+# ***************************************************************************
 
-annual_trend = global_change_trend$OLS_regression_samples
-
-# Estimated percent of population remaining after 3 generations
-IUCN_3generation = 100*exp(annual_trend*47)
-
-# Probability the population will decline by more than 80% (Critically Endangered)
-mean(IUCN_3generation <= 20)
-
-# Probability the population will decline by more than 50% (Endangered)
-mean(IUCN_3generation <= 50)
-
-# Probability the population will decline by more than 30% (Vulnerable)
-mean(IUCN_3generation <= 70)
-
-
-#----------------------------------------------------------
-# Sequentially remove each colony and recalculate global trend
-#  - provides insight into the effect each colony has on the global trend
-#----------------------------------------------------------
-
-colony_removal_results <- data.frame(site_removed = "All sites included",
-                                     
-                                     percent_change_q50 = global_change_trend$percent_change_summary["50%"],
-                                     percent_change_q05 = global_change_trend$percent_change_summary["5%"],
-                                     percent_change_q95 = global_change_trend$percent_change_summary["95%"],
-                                     
-                                     OLS_regression_q50 = global_change_trend$OLS_regression_summary["50%"],
-                                     OLS_regression_q05 = global_change_trend$OLS_regression_summary["5%"],
-                                     OLS_regression_q95 = global_change_trend$OLS_regression_summary["95%"])
-
-
-for (i in 1:nrow(colony_attributes)){
-  
-  # Remove focal colony from global sum
-  N_global_minus1 <- out$sims.list$N[,-i,] %>%
-    apply(.,c(1,3),sum)
-  
-  colnames(N_global_minus1) <- year_range
-  N_global_minus1 <- N_global_minus1 %>% 
-    reshape2::melt() %>% 
-    rename(mcmc_sample = Var1, Year = Var2, N = value)
-  
-  N_global_minus1_matrix = N_global_minus1 %>% 
-    spread(Year, N) %>%
-    dplyr::select(-mcmc_sample) %>%
-    as.matrix()
-  
-  global_change_trend_minus1 <- change_trend_fn(N_global_minus1_matrix)
-  
-  colony_removal_results <- rbind(colony_removal_results, 
-                                  data.frame(site_removed = colony_attributes$site_id[i],
-                                             
-                                             percent_change_q50 = global_change_trend_minus1$percent_change_summary["50%"],
-                                             percent_change_q05 = global_change_trend_minus1$percent_change_summary["5%"],
-                                             percent_change_q95 = global_change_trend_minus1$percent_change_summary["95%"],
-                                             
-                                             OLS_regression_q50 = global_change_trend_minus1$OLS_regression_summary["50%"],
-                                             OLS_regression_q05 = global_change_trend_minus1$OLS_regression_summary["5%"],
-                                             OLS_regression_q95 = global_change_trend_minus1$OLS_regression_summary["95%"]
-                                  ))
-}
-
-# Merge with colony attributes table
-colony_removal_results <- colony_removal_results %>% full_join(colony_attributes, by = c("site_removed" = "site_id"))
-
-colony_removal_results$p_ice_reg[1] <- ""
-colony_removal_results$ice_reg[1] <- ""
-
-colony_removal_results$p_ice_reg <- factor(colony_removal_results$p_ice_reg,
-                                           levels = c(
-                                             "Ross",
-                                             "Bell-Amundsen",
-                                             "Weddell",
-                                             "Indian",
-                                             "Pacific",
-                                             ""))
-
-colony_removal_results <- colony_removal_results %>%
-  arrange(p_ice_reg,img_lon_mean)
-
-
-colony_removal_results$site_removed <- factor(colony_removal_results$site_removed,
-                                              levels = colony_removal_results$site_removed)
-
-
-ggplot(colony_removal_results, aes(y = site_removed, 
-                                   x = OLS_regression_q50,
-                                   xmin = OLS_regression_q05,
-                                   xmax = OLS_regression_q95,
-                                   col = p_ice_reg))+
-  geom_vline(xintercept = colony_removal_results$OLS_regression_q50[which(colony_removal_results$site_removed == "All sites included")],
-             col = "gray80", size = 3)+
-  geom_vline(xintercept = colony_removal_results$OLS_regression_q05[which(colony_removal_results$site_removed == "All sites included")],
-             col = "gray80", size = 1.5)+
-  geom_vline(xintercept = colony_removal_results$OLS_regression_q95[which(colony_removal_results$site_removed == "All sites included")],
-             col = "gray80", size = 1.5)+
-  
-  geom_point(size=4)+
-  geom_errorbarh(height=0)+
-  theme_bw()+
-  #theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
-  scale_color_manual(values=c(
-    "#5a4ed8",
-    "#57abcf",
-    "#54edac",
-    "#feff00",
-    "#f6626d",
-    
-    "black"),
-    guide = "none")+
-  xlab("Trend Estimate")+
-  ylab("Site Omitted")+
-  facet_grid(rows = vars(p_ice_reg), scales = "free_y", space = "free") +
-  theme(panel.spacing.x = unit(10, "cm"),
-        strip.text.x = element_blank())+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  ggtitle("Global trend estimate after omitting each colony\n")
-
-#----------------------------------------------------------
-# Evaluate magnitude of change between years at each colony
-#----------------------------------------------------------
-
-change_annual <- data.frame()
-
-# For each colony, in each year, for each mcmc sample, calculate percent change between years
-for (mc_sample in 1:dim(out$sims.list$N)[1]){
-  
-  N_matrix <- out$sims.list$N[mc_sample,,]
-  N_matrix[N_matrix == 0] <- NA
-  
-  tmp <- apply(log(N_matrix),1,function(x)diff(x)) %>%
-    reshape2::melt() %>%
-    dplyr::rename(year_number = Var1,
-                  site_number = Var2,
-                  log_change = value) %>%
-    mutate(mc_sample = mc_sample)
-  
-  
-  change_annual <- rbind(change_annual, tmp)
-  
-  print(mc_sample)
-}
-
-# Calculate summaries of magnitude of change between consecutive years at each colony
-test1 <- change_annual %>%
-  group_by(mc_sample, site_number) %>%
-  summarize(ratio_med = median(ratio, na.rm = TRUE),
-            percent_change_med = median(percent_change, na.rm = TRUE))
-
-test2 <- change_annual %>%
-  group_by(year_number, site_number) %>%
-  summarize(log_change_mean = mean(log_change, na.rm = TRUE),
-            log_change_q05 = quantile(log_change,0.05, na.rm = TRUE),
-            log_change_q95 = quantile(log_change,0.95, na.rm = TRUE)) %>%
-  full_join(colony_attributes[,c("site_id","site_number")],.)
-
-scale_y <- data.frame(log_diff = c(log(0.5),log(0.75),log(1),-log(0.75),-log(0.5)))
-scale_y$percent_change <- (100*(exp(scale_y$log_diff)-1)) %>% round()
-scale_y$label <- paste0(scale_y$percent_change,"%")
-scale_y$label[4:5] <- paste0("+",scale_y$label[4:5])
-scale_y
-
-ggplot(test2, aes(x = year_number, y = log_change_mean, ymin = log_change_q05, ymax = log_change_q95))+
-  geom_point()+
-  geom_errorbar(width=0)+
-  facet_wrap(site_id~.)+
-  scale_y_continuous(breaks = scale_y$log_diff, labels = scale_y$label)+
-  theme_bw()+
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank())+
-  geom_hline(yintercept = c(log(0.5),-log(0.5)), col = "orangered", alpha = 0.5)+
-  geom_hline(yintercept = c(log(0.75),-log(0.75)), col = "orangered", alpha = 0.25)+
-  geom_hline(yintercept = 0, col = "orangered", alpha = 0.1)
-
-
-# -------------------------------
-# Calculate sd of year-to-year change in global abundance
-# -------------------------------
-
-global_sd = log(out$sims.list$N_global) %>% 
-  apply(.,1,diff) %>%
-  apply(.,2,sd)
-global_sd
-
-hist(global_sd)
+# #----------------------------------------------------------
+# # Plot magnitude of change at each colony on a map
+# #----------------------------------------------------------
+# 
+# # Change categories (>100% decrease,50-100% decrease, 0-50% decrease, 0-50% increase, 50-100% increase)
+# df_2009 = subset(colony_summary, year == 2009)
+# df_2018 = subset(colony_summary, year == 2018)
+# world <- map_data("world")
+# lim <- max(abs(df_2018$change_since_2009_mean),na.rm = TRUE)
+#
+# trend_map <- ggplot(world, aes(x=long, y=lat, group=group)) +
+#   geom_polygon(fill = "gray95", col = "gray55",alpha=0.5) +
+#   scale_y_continuous(breaks=(-2:2) * 30, limits = c(-90,-60)) +
+#   scale_x_continuous(breaks=(-4:4) * 45) +
+#   coord_map("ortho", orientation=c(-90, 0, 0)) +
+#   theme_bw()+
+#   theme(axis.text = element_blank(),
+#         axis.title = element_blank(),
+#         axis.ticks=element_blank(),
+#         panel.border = element_blank()) +
+#   geom_point(data = df_2018,
+#              aes(x=lon, y=lat,group=1,
+#                  col = change_since_2009_mean#,size = change_since_2009_mean
+#                  ))+
+#   geom_label_repel(data = df_2018,aes(x=lon, y=lat,group=1,
+#                                       label = site_id,
+#                                       col = change_since_2009_mean
+#                                       ))+
+#   scale_color_gradientn(colors = c("red","gray90","blue"),limits = c(-lim,lim), name = "Change since 2009")+
+#   scale_size_continuous(name = "Change since 2009")
+# print(trend_map)
+#
+# pdf(file = "./output_empirical/FigX_trend_map.pdf", width = 8, height = 8)
+# print(trend_map)
+# dev.off()
+# 
+# # -------------------------------
+# # Calculate sd of year-to-year change in log(global abundance)
+# # ((Process variance of global abundance))
+# # -------------------------------
+# 
+# global_sd = log(out$sims.list$N_global) %>% 
+#   apply(.,1,diff) %>%
+#   apply(.,2,sd)
+# global_sd
+# 
+# hist(global_sd)
+# 
+# #----------------------------------------------------------
+# # Evaluate magnitude of change between years at each colony
+# #----------------------------------------------------------
+# 
+# change_annual <- data.frame()
+# 
+# # For each colony, in each year, for each mcmc sample, calculate percent change between years
+# for (mc_sample in 1:dim(out$sims.list$N)[1]){
+#   
+#   N_matrix <- out$sims.list$N[mc_sample,,]
+#   N_matrix[N_matrix == 0] <- NA
+#   
+#   tmp <- apply(log(N_matrix),1,function(x)diff(x)) %>%
+#     reshape2::melt() %>%
+#     dplyr::rename(year_number = Var1,
+#                   site_number = Var2,
+#                   log_change = value) %>%
+#     mutate(mc_sample = mc_sample)
+#   
+#   
+#   change_annual <- rbind(change_annual, tmp)
+#   
+#   print(mc_sample)
+# }
+# 
+# # Calculate summaries of magnitude of change between consecutive years at each colony
+# test1 <- change_annual %>%
+#   group_by(mc_sample, site_number) %>%
+#   summarize(ratio_med = median(ratio, na.rm = TRUE),
+#             percent_change_med = median(percent_change, na.rm = TRUE))
+# 
+# test2 <- change_annual %>%
+#   group_by(year_number, site_number) %>%
+#   summarize(log_change_mean = mean(log_change, na.rm = TRUE),
+#             log_change_q05 = quantile(log_change,0.05, na.rm = TRUE),
+#             log_change_q95 = quantile(log_change,0.95, na.rm = TRUE)) %>%
+#   full_join(colony_attributes[,c("site_id","site_number")],.)
+# 
+# scale_y <- data.frame(log_diff = c(log(0.5),log(0.75),log(1),-log(0.75),-log(0.5)))
+# scale_y$percent_change <- (100*(exp(scale_y$log_diff)-1)) %>% round()
+# scale_y$label <- paste0(scale_y$percent_change,"%")
+# scale_y$label[4:5] <- paste0("+",scale_y$label[4:5])
+# scale_y
+# 
+# ggplot(test2, aes(x = year_number, y = log_change_mean, ymin = log_change_q05, ymax = log_change_q95))+
+#   geom_point()+
+#   geom_errorbar(width=0)+
+#   facet_wrap(site_id~.)+
+#   scale_y_continuous(breaks = scale_y$log_diff, labels = scale_y$label)+
+#   theme_bw()+
+#   theme(panel.grid.minor = element_blank(),
+#         panel.grid.major = element_blank())+
+#   geom_hline(yintercept = c(log(0.5),-log(0.5)), col = "orangered", alpha = 0.5)+
+#   geom_hline(yintercept = c(log(0.75),-log(0.75)), col = "orangered", alpha = 0.25)+
+#   geom_hline(yintercept = 0, col = "orangered", alpha = 0.1)
+# 
+# #----------------------------------------------------------
+# # Sequentially remove each colony and recalculate global trend
+# #  - provides insight into the effect each colony has on the global trend
+# #----------------------------------------------------------
+# 
+# colony_removal_results <- data.frame(site_removed = "All sites included",
+#                                      
+#                                      percent_change_q50 = global_change_trend$percent_change_summary["50%"],
+#                                      percent_change_q05 = global_change_trend$percent_change_summary["5%"],
+#                                      percent_change_q95 = global_change_trend$percent_change_summary["95%"],
+#                                      
+#                                      OLS_regression_q50 = global_change_trend$OLS_regression_summary["50%"],
+#                                      OLS_regression_q05 = global_change_trend$OLS_regression_summary["5%"],
+#                                      OLS_regression_q95 = global_change_trend$OLS_regression_summary["95%"])
+# 
+# 
+# for (i in 1:nrow(colony_attributes)){
+#   
+#   # Remove focal colony from global sum
+#   N_global_minus1 <- out$sims.list$N[,-i,] %>%
+#     apply(.,c(1,3),sum)
+#   
+#   colnames(N_global_minus1) <- year_range
+#   N_global_minus1 <- N_global_minus1 %>% 
+#     reshape2::melt() %>% 
+#     rename(mcmc_sample = Var1, Year = Var2, N = value)
+#   
+#   N_global_minus1_matrix = N_global_minus1 %>% 
+#     spread(Year, N) %>%
+#     dplyr::select(-mcmc_sample) %>%
+#     as.matrix()
+#   
+#   global_change_trend_minus1 <- change_trend_fn(N_global_minus1_matrix)
+#   
+#   colony_removal_results <- rbind(colony_removal_results, 
+#                                   data.frame(site_removed = colony_attributes$site_id[i],
+#                                              
+#                                              percent_change_q50 = global_change_trend_minus1$percent_change_summary["50%"],
+#                                              percent_change_q05 = global_change_trend_minus1$percent_change_summary["5%"],
+#                                              percent_change_q95 = global_change_trend_minus1$percent_change_summary["95%"],
+#                                              
+#                                              OLS_regression_q50 = global_change_trend_minus1$OLS_regression_summary["50%"],
+#                                              OLS_regression_q05 = global_change_trend_minus1$OLS_regression_summary["5%"],
+#                                              OLS_regression_q95 = global_change_trend_minus1$OLS_regression_summary["95%"]
+#                                   ))
+# }
+# 
+# # Merge with colony attributes table
+# colony_removal_results <- colony_removal_results %>% full_join(colony_attributes, by = c("site_removed" = "site_id"))
+# 
+# colony_removal_results$p_ice_reg[1] <- ""
+# colony_removal_results$ice_reg[1] <- ""
+# 
+# colony_removal_results$p_ice_reg <- factor(colony_removal_results$p_ice_reg,
+#                                            levels = c(
+#                                              "Ross",
+#                                              "Bell-Amundsen",
+#                                              "Weddell",
+#                                              "Indian",
+#                                              "Pacific",
+#                                              ""))
+# 
+# colony_removal_results <- colony_removal_results %>%
+#   arrange(p_ice_reg,img_lon_mean)
+# 
+# 
+# colony_removal_results$site_removed <- factor(colony_removal_results$site_removed,
+#                                               levels = colony_removal_results$site_removed)
+# 
+# 
+# ggplot(colony_removal_results, aes(y = site_removed, 
+#                                    x = OLS_regression_q50,
+#                                    xmin = OLS_regression_q05,
+#                                    xmax = OLS_regression_q95,
+#                                    col = p_ice_reg))+
+#   geom_vline(xintercept = colony_removal_results$OLS_regression_q50[which(colony_removal_results$site_removed == "All sites included")],
+#              col = "gray80", size = 3)+
+#   geom_vline(xintercept = colony_removal_results$OLS_regression_q05[which(colony_removal_results$site_removed == "All sites included")],
+#              col = "gray80", size = 1.5)+
+#   geom_vline(xintercept = colony_removal_results$OLS_regression_q95[which(colony_removal_results$site_removed == "All sites included")],
+#              col = "gray80", size = 1.5)+
+#   
+#   geom_point(size=4)+
+#   geom_errorbarh(height=0)+
+#   theme_bw()+
+#   #theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
+#   scale_color_manual(values=c(
+#     "#5a4ed8",
+#     "#57abcf",
+#     "#54edac",
+#     "#feff00",
+#     "#f6626d",
+#     
+#     "black"),
+#     guide = "none")+
+#   xlab("Trend Estimate")+
+#   ylab("Site Omitted")+
+#   facet_grid(rows = vars(p_ice_reg), scales = "free_y", space = "free") +
+#   theme(panel.spacing.x = unit(10, "cm"),
+#         strip.text.x = element_blank())+
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+#   ggtitle("Global trend estimate after omitting each colony\n")
+# 
+# #----------------------------------------------------------
+# # Estimate change over 3 generations and IUCN thresholds
+# # Generation time = 16 years (Jenouvrier et al. 2014 Nature Climate Change)
+# # 3 generations = 48 years
+# #----------------------------------------------------------
+# 
+# annual_trend = global_change_trend$OLS_regression_samples
+# 
+# # Estimated percent of population remaining after 3 generations
+# IUCN_3generation = 100*exp(annual_trend*48)
+# 
+# # Probability the population will decline by more than 80% (Critically Endangered)
+# mean(IUCN_3generation <= 20)
+# 
+# # Probability the population will decline by more than 50% (Endangered)
+# mean(IUCN_3generation <= 50)
+# 
+# # Probability the population will decline by more than 30% (Vulnerable)
+# mean(IUCN_3generation <= 70)
