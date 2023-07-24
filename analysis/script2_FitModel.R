@@ -444,7 +444,8 @@ change_trend_fn <- function(mat){
   
   OLS_regression_summary <- c(mean = mean(OLS_regression_samples),
                               SE = sd(OLS_regression_samples),
-                              quantile(OLS_regression_samples,c(0.025,0.05,0.5,0.95,0.975)))
+                              quantile(OLS_regression_samples,c(0.025,0.05,0.5,0.95,0.975)),
+                              prob_negative = mean(OLS_regression_samples<0))
   
   
   return(list(prob_decline = prob_decline, 
@@ -797,7 +798,7 @@ regional_estimate_fn <- function(region_names = NA,
     print(reg_plot1)
     dev.off()
     
-    tiff(filename = paste0("output/model_results/2_Regional_Level/REGIONAL_",region_names,"_FixedYAxis",reg,".tif"), width = 4, height = 3, units = "in", res = 300)
+    tiff(filename = paste0("output/model_results/2_Regional_Level/REGIONAL_",region_names,"_FixedYAxis_",reg,".tif"), width = 4, height = 3, units = "in", res = 300)
     print(reg_plot2)
     dev.off()
     
@@ -844,25 +845,31 @@ popchange_fastice = fast_ice_reg$regional_change_summary %>% full_join(icetrend)
 nameColor <- bquote(atop(Minimum~fast,
                          ice~extent~(km^2)))
 
-sea_ice_plot <- ggplot(data = popchange_fastice,aes(x = FastIceTrend,
-                                                    y = Prob_Decline,
-                                                    col = FastIceExtent_min*1000,
-                                                    label = Region)) +
-  geom_point(size = 2)+
-  geom_text(data = popchange_fastice,aes(x = FastIceTrend,
-                                               y = Prob_Decline,
-                                               col = FastIceExtent_min*1000,
-                                               label = Region),
-                  col = "gray70", size = 2, hjust = 1.1)+
+sea_ice_plot <- ggplot(data = popchange_fastice,
+                       aes(x = FastIceTrend,
+                           y = Prob_Decline,
+                           col = FastIceExtent_min*1000,
+                           label = Region)) +
+  geom_point(size = 4)+
+  geom_text_repel(data = popchange_fastice,
+                  aes(x = FastIceTrend,
+                      y = Prob_Decline,
+                      col = FastIceExtent_min*1000,
+                      label = Region),
+                  size = 3.5,
+                  min.segment.length = 5,
+                  hjust = 1,
+                  nudge_x = -0.3,
+                  alpha = 0.5)+
   #scale_color_gradientn(colors = c("gray90","blue"))+
   scale_color_gradientn(colors = rev(inferno(50)[12:40]))+
   xlab("Fast ice trend\n(% change per year)")+
   ylab("Probability of population decline")+
-  coord_cartesian(xlim = c(-3.2,3.2))+
+  coord_cartesian(xlim = c(-4,4))+
   theme_few()+
   labs(color = nameColor)+
   theme(legend.position = "right")
-print(sea_ice_plot)
+#print(sea_ice_plot)
 
 # Save figure
 tiff(filename = "output/model_results/2_Regional_Level/sea_ice_correlation.tif", width = 7, height = 3.5, units = "in", res = 300)

@@ -4,8 +4,6 @@
 *.pdf
 *.RData
 *.ini
-*.xlsx
-*.csv
 analysis/.Rhistory
 analysis/script4_simulation.R
 data/empe_aerial.csv
