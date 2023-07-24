@@ -120,7 +120,7 @@ if (!file.exists("./output/simulation/sim_results.RData")){
 # and statistical model is applied to estimate global abundance and trend
 # --------------------------------------
 
-for (sim_run in rev(seq(1,1000,1))){
+for (sim_run in seq(1,1000,1)){
   
   set.seed(sim_run)
   
@@ -424,7 +424,10 @@ for (sim_run in rev(seq(1,1000,1))){
 # ***********************************************************************
 
 load(file = "./output/simulation/sim_results.RData")
+
+simulation_results <- subset(simulation_results, Rhat_hyper == 0 & Rhat_indices == 0)
 nrow(simulation_results)
+simulation_results <- simulation_results[1:250,]
 
 # ---------------------------------------
 # Trend (average annual percent change from 2009 to 2018)
