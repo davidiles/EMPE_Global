@@ -550,8 +550,11 @@ mean(global_change_trend$OLS_regression_samples<0) # 0.87
 global_change_summary$`97.5%`-global_change_summary$`2.5%`  # width of 95% CI = 40.6
 global_change_trend$OLS_regression_summary["97.5%"] - global_change_trend$OLS_regression_summary["2.5%"] # 0.044
 
+# Percent change in population size between 2009 and 2018
 global_change_summary$`50%` # -9.6
 global_change_summary$Prob_Decline # 0.81
+
+quantile(N_global_matrix[,10] - N_global_matrix[,1],c(0.025,0.5,0.975))
 
 write.csv(global_abundance_summary, file = "output/model_results/1_Global_Level/GLOBAL_abundance.csv", row.names = FALSE)
 write.csv(global_change_summary, file = "output/model_results/1_Global_Level/GLOBAL_change.csv", row.names = FALSE)
@@ -836,7 +839,7 @@ pack_ice_reg <- regional_estimate_fn(region_names = "p_ice_reg",
                                      N_samples = N_samples)
 
 #----------------------------------------------------------
-# Correlation between regional sea ice trends and population trends
+# Correlation between regional FAST ice trends and population trends
 #----------------------------------------------------------
 
 icetrend <- read.csv("../data/fast_ice_trends.csv")
@@ -878,6 +881,8 @@ dev.off()
 
 rho = DescTools::SpearmanRho(popchange_fastice$Prob_Decline,popchange_fastice$FastIceTrend,conf.level = 0.95)
 rho
+
+
 
 # ***************************************************************************
 # ***************************************************************************
@@ -936,59 +941,59 @@ rho
 # #----------------------------------------------------------
 # # Evaluate magnitude of change between years at each colony
 # #----------------------------------------------------------
-# 
-# change_annual <- data.frame()
-# 
-# # For each colony, in each year, for each mcmc sample, calculate percent change between years
-# for (mc_sample in 1:dim(out$sims.list$N)[1]){
-#   
-#   N_matrix <- out$sims.list$N[mc_sample,,]
-#   N_matrix[N_matrix == 0] <- NA
-#   
-#   tmp <- apply(log(N_matrix),1,function(x)diff(x)) %>%
-#     reshape2::melt() %>%
-#     dplyr::rename(year_number = Var1,
-#                   site_number = Var2,
-#                   log_change = value) %>%
-#     mutate(mc_sample = mc_sample)
-#   
-#   
-#   change_annual <- rbind(change_annual, tmp)
-#   
-#   print(mc_sample)
-# }
-# 
-# # Calculate summaries of magnitude of change between consecutive years at each colony
+
+change_annual <- data.frame()
+
+# For each colony, in each year, for each mcmc sample, calculate percent change between years
+for (mc_sample in 1:dim(out$sims.list$N)[1]){
+
+  N_matrix <- out$sims.list$N[mc_sample,,]
+  N_matrix[N_matrix == 0] <- NA
+
+  tmp <- apply(log(N_matrix),1,function(x)diff(x)) %>%
+    reshape2::melt() %>%
+    dplyr::rename(year_number = Var1,
+                  site_number = Var2,
+                  log_change = value) %>%
+    mutate(mc_sample = mc_sample)
+
+
+  change_annual <- rbind(change_annual, tmp)
+
+  print(mc_sample)
+}
+
+# Calculate summaries of magnitude of change between consecutive years at each colony
 # test1 <- change_annual %>%
 #   group_by(mc_sample, site_number) %>%
 #   summarize(ratio_med = median(ratio, na.rm = TRUE),
 #             percent_change_med = median(percent_change, na.rm = TRUE))
-# 
-# test2 <- change_annual %>%
-#   group_by(year_number, site_number) %>%
-#   summarize(log_change_mean = mean(log_change, na.rm = TRUE),
-#             log_change_q05 = quantile(log_change,0.05, na.rm = TRUE),
-#             log_change_q95 = quantile(log_change,0.95, na.rm = TRUE)) %>%
-#   full_join(colony_attributes[,c("site_id","site_number")],.)
-# 
-# scale_y <- data.frame(log_diff = c(log(0.5),log(0.75),log(1),-log(0.75),-log(0.5)))
-# scale_y$percent_change <- (100*(exp(scale_y$log_diff)-1)) %>% round()
-# scale_y$label <- paste0(scale_y$percent_change,"%")
-# scale_y$label[4:5] <- paste0("+",scale_y$label[4:5])
-# scale_y
-# 
-# ggplot(test2, aes(x = year_number, y = log_change_mean, ymin = log_change_q05, ymax = log_change_q95))+
-#   geom_point()+
-#   geom_errorbar(width=0)+
-#   facet_wrap(site_id~.)+
-#   scale_y_continuous(breaks = scale_y$log_diff, labels = scale_y$label)+
-#   theme_bw()+
-#   theme(panel.grid.minor = element_blank(),
-#         panel.grid.major = element_blank())+
-#   geom_hline(yintercept = c(log(0.5),-log(0.5)), col = "orangered", alpha = 0.5)+
-#   geom_hline(yintercept = c(log(0.75),-log(0.75)), col = "orangered", alpha = 0.25)+
-#   geom_hline(yintercept = 0, col = "orangered", alpha = 0.1)
-# 
+
+test2 <- change_annual %>%
+  group_by(year_number, site_number) %>%
+  summarize(log_change_mean = mean(log_change, na.rm = TRUE),
+            log_change_q05 = quantile(log_change,0.05, na.rm = TRUE),
+            log_change_q95 = quantile(log_change,0.95, na.rm = TRUE)) %>%
+  full_join(colony_attributes[,c("site_id","site_number")],.)
+
+scale_y <- data.frame(log_diff = c(log(0.5),log(0.75),log(1),-log(0.75),-log(0.5)))
+scale_y$percent_change <- (100*(exp(scale_y$log_diff)-1)) %>% round()
+scale_y$label <- paste0(scale_y$percent_change,"%")
+scale_y$label[4:5] <- paste0("+",scale_y$label[4:5])
+scale_y
+
+ggplot(test2, aes(x = year_number, y = log_change_mean, ymin = log_change_q05, ymax = log_change_q95))+
+  geom_point()+
+  geom_errorbar(width=0)+
+  facet_wrap(site_id~.)+
+  scale_y_continuous(breaks = scale_y$log_diff, labels = scale_y$label)+
+  theme_bw()+
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank())+
+  geom_hline(yintercept = c(log(0.5),-log(0.5)), col = "orangered", alpha = 0.5)+
+  geom_hline(yintercept = c(log(0.75),-log(0.75)), col = "orangered", alpha = 0.25)+
+  geom_hline(yintercept = 0, col = "orangered", alpha = 0.1)
+
 # #----------------------------------------------------------
 # # Sequentially remove each colony and recalculate global trend
 # #  - provides insight into the effect each colony has on the global trend

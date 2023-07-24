@@ -443,7 +443,7 @@ simulation_results$global_trend_true = 100*(exp(simulation_results$global_trend_
 # Credible interval coverage
 simulation_results$trend_cov <- simulation_results$global_trend_est_q025 <= simulation_results$global_trend_true & simulation_results$global_trend_est_q975 >= simulation_results$global_trend_true
 trend_coverage <- mean(simulation_results$trend_cov) %>% round(2)
-mean_trend_bias <- mean(simulation_results$global_trend_est_mean - simulation_results$global_trend_true) %>% round(1)
+med_trend_bias <- median(simulation_results$global_trend_est_mean - simulation_results$global_trend_true) %>% round(1)
 
 ylim = range(simulation_results[,c("global_trend_true","global_trend_est_q025","global_trend_est_q975")])
 trend_plot <- ggplot(simulation_results,aes(x = global_trend_true, 
@@ -459,7 +459,7 @@ trend_plot <- ggplot(simulation_results,aes(x = global_trend_true,
   xlab("True (simulated) global trend")+
   ylab("Estimated global trend")+
   labs(title = paste0("Simulation results"),
-       subtitle = paste0("Mean bias of trend estimate = ",mean_trend_bias,"%\n95% credible interval coverage = ",trend_coverage*100,"%"))+
+       subtitle = paste0("Median bias of trend estimate = ",med_trend_bias,"%\n95% credible interval coverage = ",trend_coverage*100,"%"))+
   theme_bw()
 #print(trend_plot)
 
@@ -474,7 +474,7 @@ dev.off()
 # Credible interval coverage
 simulation_results$percent_change_cov <- simulation_results$percent_change_est_q025 <= simulation_results$percent_change_true & simulation_results$percent_change_est_q975 >= simulation_results$percent_change_true
 percent_change_coverage <- mean(simulation_results$percent_change_cov) %>% round(2)
-mean_percent_change_bias <- mean(simulation_results$percent_change_est_mean - simulation_results$percent_change_true) %>% round(1)
+med_percent_change_bias <- median(simulation_results$percent_change_est_mean - simulation_results$percent_change_true) %>% round(1)
 
 # Just to help identify a useful scale
 ymax = 400
@@ -504,7 +504,7 @@ percent_change_plot <- ggplot(simulation_results,
   xlab("True (simulated) percent\nchange from 2009 to 2018")+
   ylab("Estimated percent\nchange from 2009 to 2018")+
   labs(title = paste0("Simulation results"),
-       subtitle = paste0("Mean bias of change estimate = ",mean_percent_change_bias,"%\n95% credible interval coverage = ",percent_change_coverage*100,"%"))+
+       subtitle = paste0("Median bias of change estimate = ",med_percent_change_bias,"%\n95% credible interval coverage = ",percent_change_coverage*100,"%"))+
   theme_bw()
 #print(percent_change_plot)
 
