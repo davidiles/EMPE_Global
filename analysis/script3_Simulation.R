@@ -120,7 +120,7 @@ if (!file.exists("./output/simulation/sim_results.RData")){
 # and statistical model is applied to estimate global abundance and trend
 # --------------------------------------
 
-for (sim_run in seq(1,1000,1)){
+for (sim_run in rev(seq(1,1000,1))){
   
   set.seed(sim_run)
   
@@ -427,7 +427,7 @@ load(file = "./output/simulation/sim_results.RData")
 
 simulation_results <- subset(simulation_results, Rhat_hyper == 0 & Rhat_indices == 0)
 nrow(simulation_results)
-simulation_results <- simulation_results[1:250,]
+simulation_results <- simulation_results[1:500,]
 
 # ---------------------------------------
 # Trend (average annual percent change from 2009 to 2018)
@@ -461,7 +461,7 @@ trend_plot <- ggplot(simulation_results,aes(x = global_trend_true,
   labs(title = paste0("Simulation results"),
        subtitle = paste0("Mean bias of trend estimate = ",mean_trend_bias,"%\n95% credible interval coverage = ",trend_coverage*100,"%"))+
   theme_bw()
-print(trend_plot)
+#print(trend_plot)
 
 png("./output/simulation/trend_sim_results.png", width = 5, height = 4, units = "in",res=500)
 print(trend_plot)
@@ -506,7 +506,7 @@ percent_change_plot <- ggplot(simulation_results,
   labs(title = paste0("Simulation results"),
        subtitle = paste0("Mean bias of change estimate = ",mean_percent_change_bias,"%\n95% credible interval coverage = ",percent_change_coverage*100,"%"))+
   theme_bw()
-print(percent_change_plot)
+#print(percent_change_plot)
 
 png("./output/simulation/change_sim_results.png", width = 5, height = 4, units = "in",res=500)
 print(percent_change_plot)
@@ -533,7 +533,7 @@ pvals_satellite <- ggplot(simulation_results, aes(x = Bayesian_pval_satellite))+
   scale_x_continuous(breaks = seq(-0.2,1.2,0.2), limits = c(0,1))
 
 pval_plot <- ggarrange(pvals_adult,pvals_satellite,nrow=2)
-pval_plot
+#pval_plot
 
 png("./output/simulation/Bayesian_pval_plot.png", width = 5, height = 7, units = "in",res=500)
 print(pval_plot)
