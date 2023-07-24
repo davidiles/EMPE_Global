@@ -326,7 +326,7 @@ MCMCtrace(out, params = indices_and_trends, Rhat = TRUE, filename = "output/mode
 
 # Effective sample sizes
 n.eff <- unlist(out$n.eff)
-n.eff[n.eff > 1 & n.eff <= 2000] # Parameters with fewer than 2000 samples
+n.eff[n.eff > 1 & n.eff <= 2500] # Parameters with fewer than 2000 samples
 
 #----------------------------------------------------------
 # Posterior predictive checks
@@ -339,7 +339,7 @@ df_aerial = data.frame(actual = out$sims.list$RMSE_adult_count_actual,
 plot1 <- ggplot(data = df_aerial,
                 aes(x = actual, y = simulated )) +
   geom_hex(binwidth = diff(lim)/50) +
-  scale_fill_gradientn(colors = c("gray95","darkblue")) +
+  scale_fill_gradientn(colors = c("gray95","darkblue"), name = "Number of\nsimulated\ndatasets") +
   geom_abline(intercept = 0, slope = 1)+
   coord_cartesian(xlim = lim,ylim=lim)+
   ggtitle(paste0("Posterior predictive check: Adult counts\n\nBayesian p-value = ",pval_adult))+
@@ -355,7 +355,7 @@ df_sat = data.frame(actual = out$sims.list$RMSE_satellite_actual,
 plot2 <- ggplot(data = df_sat,
                 aes(x = actual, y = simulated )) +
   geom_hex(binwidth = diff(lim)/50) +
-  scale_fill_gradientn(colors = c("gray95","darkblue")) +
+  scale_fill_gradientn(colors = c("gray95","darkblue"), name = "Number of\nsimulated\ndatasets") +
   geom_abline(intercept = 0, slope = 1)+
   coord_cartesian(xlim = lim,ylim=lim)+
   ggtitle(paste0("Posterior predictive check: Satellite surveys\n\nBayesian p-value = ",pval_satellite))+
@@ -364,7 +364,7 @@ plot2 <- ggplot(data = df_sat,
   theme_bw()
 
 pval_plot <- ggarrange(plot1,plot2,nrow=2)
-pval_plot
+#pval_plot
 
 png("./output/model_checks/Bayesian_pval_plot.png", width = 5, height = 7, units = "in",res=500)
 print(pval_plot)
@@ -643,11 +643,11 @@ p1 <- ggplot() +
   theme_bw()+
   geom_hline(yintercept = 0, linetype = 2, col = "transparent")
 
-png("output/model_results/3_Colony_Level/colony_dynamics_fitted.png", units = "in", res = 1000, width = 20, height = 20)
+png("output/model_results/3_Colony_Level/colony_dynamics_fitted.png", units = "in", res = 300, width = 15, height = 20)
 print(p1)
 dev.off()
 
-pdf("output/model_results/3_Colony_Level/colony_dynamics_fitted.pdf", width = 20, height = 20)
+pdf("output/model_results/3_Colony_Level/colony_dynamics_fitted.pdf", width = 10, height = 30)
 print(p1)
 dev.off()
 
