@@ -13,7 +13,7 @@ rm(list=ls())
 # Load data package and fitted model
 # --------------------------------------
 load("output/EMPE_data_formatted.RData") # Data
-load(file = "output/fitted_model.RData")    # Fitted model
+load(file = "output/fitted_model.RData") # Fitted model
 
 # --------------------------------------
 # # JAGS script used to simulate data, based on jags.data.sim
