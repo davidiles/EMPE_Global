@@ -7,6 +7,7 @@ my.packs <- c(
   # Data manipulation
   'tidyverse','reshape2','lubridate','readxl',
   
+  
   # Spatial analysis
   'rgeos','raster','sp','sf',
   
@@ -16,9 +17,10 @@ my.packs <- c(
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
-setwd("D:/Working_Files/1_Projects/Side_Projects/EMPE_Global/analysis")
+setwd("~/1_Work/EMPE_Global/analysis")
 
 rm(list=ls())
+
 
 # ****************************************************************************************************************
 # ****************************************************************************************************************
@@ -26,8 +28,9 @@ rm(list=ls())
 # ****************************************************************************************************************
 # ****************************************************************************************************************
 
+
 # --------------------------------------------------
-# Relevant years for analysis
+# Colony attributes
 # --------------------------------------------------
 
 year_range <- 2009:2018
@@ -120,6 +123,7 @@ sat_excluded_DayRange <- subset(sat1, !(obs_id %in% sat2$obs_id))
 aer_excluded_DayRange %>% dim() # 1 - aug to nov
 sat_excluded_DayRange %>% dim() # 23 - aug to nov
 
+
 # --------------------------------------------------
 # Remove any additional surveys as necessary (e.g., inadequate colony coverage, extremely poor visual conditions, etc)
 # --------------------------------------------------
@@ -196,6 +200,7 @@ save.image("output/EMPE_data_formatted.RData")
 # # PART 2: EXPLORATORY ANALYSIS / DATA VISUALIZATION
 # ****************************************************************************************************************
 # ****************************************************************************************************************
+
 
 # -----------------------------------------
 # Examine number of colonies surveyed per year
@@ -290,7 +295,6 @@ dev.off()
 # - point size for satellite image quality
 # - observed absences with a red vertical line
 # -----------------------------------------
-
 aer$img_qualit = 3
 p1 <- ggplot() +
   
