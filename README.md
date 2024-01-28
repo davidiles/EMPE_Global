@@ -14,8 +14,8 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
 
 ## File structure
 
-|- analysis/
-|  |- output/
+- analysis
+- - output
 |  |  |- data_viz ** contains stuff **
 |  |  |- model_checks
 |  |  |- model_results
