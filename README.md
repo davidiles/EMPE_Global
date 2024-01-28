@@ -23,16 +23,16 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
             - **parameter_estimates.csv** [parameter estimates from fitted Bayesian model]
         - **simulation/** [raw results and figures related to simulations]
         - **EMPE_data_formatted.RData** [formatted data for analysis, after cleaning]
-        - **fitted_model.RData** [bayesian output in JAGS]
-    - **script1_PrepareData.R**
-    - **script2_FitModel.R**
-    - **script3_Simulation.R**
+        - **fitted_model.RData** [Bayesian output in JAGS]
+    - **script1_PrepareData.R** [R script to visualize, clean, and package raw data for analysis with JAGS]
+    - **script2_FitModel.R** [R script to fit model, check convergence, evaluate goodness of fit, and generate results, figures, and summary statistics]
+    - **script3_Simulation.R** [R script to conduct simulations; used for testing the Bayesian modeling approach]
     
-- **data/**
-    - **colony_attributes.csv** []
+- **data/** 
+    - **colony_attributes.csv** [locations, names, and abbreviations for each colony]
     - **empe_aerial_2023-05-25.csv** []
     - **empe_satellite_2023-05-25.csv** []
-    - **fast_ice_trends.csv** []
+    - **fast_ice_trends.csv** [data related to regional trends in Antarctic fast ice, extracted from Table 1 in [Fraser et al. 2021](https://tc.copernicus.org/articles/15/5061/2021/)]
 
 ## Sharing/Access information
 
