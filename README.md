@@ -8,8 +8,6 @@ This repository contains data, code, and model output associated with the analys
 
 Raw data for the analysis are  included aerial and ground-based observations
 
-
-
 Give a brief summary of dataset contents, contextualized in experimental procedures and results.
 
 ## File structure
@@ -26,25 +24,15 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
         - **simulation** [raw results and figures related to simulations]
         - **EMPE_data_formatted.RData** [formatted data for analysis, after cleaning]
         - **fitted_model.RData** [bayesian output in JAGS]
-
-|  |  |- model_results
-|  |  |  |- 1_Global_Level
-|  |  |  |  |- GLOBAL_abundance.csv
-|  |  |  |  |- GLOBAL_change.csv
-|  |  |  |  |- GLOBAL_trend.csv
-|  |  |- tables
-|  |- output_simulation/
-|  |- EMPE_model_empirical.jags
-|  |- EMPE_model_simulate_data.jags
-|  |- script1_PrepareData.R
-|  |- script2_FitModel.R
-|  |- script3_Simulation.R
-
-|- data/
-|  |- colony_attributes.csv
-|  |- empe_aerial_2023-05-25.csv
-|  |- empe_satellite_2023-05-25.csv
-|  |- fast_ice_trends.csv
+    - **script1_PrepareData.R**
+    - **script2_FitModel.R**
+    - **script3_Simulation.R**
+    
+- **data**
+    - **colony_attributes.csv** []
+    - **empe_aerial_2023-05-25.csv** []
+    - **empe_satellite_2023-05-25.csv** []
+    - **fast_ice_trends.csv** []
 
 ## Sharing/Access information
 
