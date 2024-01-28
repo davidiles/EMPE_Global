@@ -17,7 +17,7 @@ my.packs <- c(
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
-setwd("~/1_Work/EMPE_Global/analysis")
+setwd("C:/Users/IlesD/OneDrive - EC-EC/Iles/Projects/X_other_projects/EMPE_Global/analysis")
 
 rm(list=ls())
 
@@ -201,7 +201,6 @@ save.image("output/EMPE_data_formatted.RData")
 # ****************************************************************************************************************
 # ****************************************************************************************************************
 
-
 # -----------------------------------------
 # Examine number of colonies surveyed per year
 # -----------------------------------------
@@ -229,9 +228,11 @@ colonies_surveyed_annual <- colonies_surveyed_annual %>%
 colonies_surveyed_annual <- colonies_surveyed_annual %>%
   pivot_longer(cols = aer_only:total, names_to = "survey_type", values_to = "n") %>%
   subset(survey_type != "total")
+
 colonies_surveyed_annual$survey_type <- factor(colonies_surveyed_annual$survey_type,
                                                levels = c("aer_only","sat_only","both"))
-p2 <- ggplot(colonies_surveyed_annual, aes(x = year, y = n, fill = survey_type)) +
+
+plot1 <- ggplot(colonies_surveyed_annual, aes(x = year, y = n, fill = survey_type)) +
   geom_bar(stat = "identity", col = "black")+
   scale_x_continuous(breaks = year_range)+
   ylab("# colonies")+
@@ -241,9 +242,9 @@ p2 <- ggplot(colonies_surveyed_annual, aes(x = year, y = n, fill = survey_type))
   theme_bw()+
   ggtitle("Number of colonies surveyed per year")
 
-png("output/data_viz/p2_nsurveys.png", units = "in", res = 500, 
+png("output/figures_and_tables/data_viz/plot1_nsurveys.png", units = "in", res = 500, 
     width = 8, height = 5)
-print(p2)
+print(plot1)
 dev.off()
 
 # -----------------------------------------
@@ -258,7 +259,7 @@ aer_colony_months <- aer %>%
 aer_colony_months$month.name <- month.name[aer_colony_months$month]
 aer_colony_months$month.name <- factor(aer_colony_months$month.name, levels = c("August","September","October","November","December"))
 
-p3_aer <- ggplot(aer_colony_months, aes(x = year, y = n, fill = month.name)) +
+p2_aer <- ggplot(aer_colony_months, aes(x = year, y = n, fill = month.name)) +
   geom_bar(stat = "identity", width = 0.2)+
   scale_fill_manual(values = c("darkblue","dodgerblue","orange","red","darkred"), name = "Month", drop = FALSE)+
   theme_bw()+
@@ -273,7 +274,7 @@ sat_colony_months <- sat %>%
   summarize(n = sum(n_sat>0))
 sat_colony_months$month.name <- month.name[sat_colony_months$month]
 sat_colony_months$month.name <- factor(sat_colony_months$month.name, levels = c("August","September","October","November","December"))
-p3_sat <- ggplot(sat_colony_months, aes(x = year, y = n, fill = month.name)) +
+p2_sat <- ggplot(sat_colony_months, aes(x = year, y = n, fill = month.name)) +
   geom_bar(stat = "identity", width = 0.2)+
   scale_fill_manual(values = c("darkblue","dodgerblue","orange","red","darkred"), name = "Month", drop = FALSE)+
   theme_bw()+
@@ -281,11 +282,11 @@ p3_sat <- ggplot(sat_colony_months, aes(x = year, y = n, fill = month.name)) +
   ylab("Number of colonies surveyed")
 
 # combine into single figure
-p3 <- ggarrange(p3_aer,p3_sat,nrow=2,align="hv")
-print(p3)
-png("output/data_viz/p3_survey_phenology.png", units = "in", res = 500, 
+plot2 <- ggarrange(p2_aer,p2_sat,nrow=2,align="hv")
+
+png("output/figures_and_tables/data_viz/plot2_survey_phenology.png", units = "in", res = 500, 
     width = 8, height = 8)
-print(p3)
+print(plot2)
 dev.off()
 
 # -----------------------------------------
@@ -296,7 +297,7 @@ dev.off()
 # - observed absences with a red vertical line
 # -----------------------------------------
 aer$img_qualit = 3
-p1 <- ggplot() +
+plot3 <- ggplot() +
   
   # Satellite observations
   geom_vline(data = subset(sat, area_m2 == 0), aes(xintercept = year), col = "gray80", size=2)+
@@ -319,10 +320,10 @@ p1 <- ggplot() +
   theme_bw()+
   geom_hline(yintercept = 0, linetype = 2, col = "transparent")
 
-png("output/data_viz/p1_raw_data.png", units = "in", res = 1000, width = 20, height = 20)
-print(p1)
+png("output/figures_and_tables/data_viz/plot3_raw_data.png", units = "in", res = 1000, width = 20, height = 20)
+print(plot3)
 dev.off()
 
-pdf("output/data_viz/p1_raw_data.pdf", width = 20, height = 20)
-print(p1)
+pdf("output/figures_and_tables/data_viz/plot3_raw_data.pdf", width = 20, height = 20)
+print(plot3)
 dev.off()
