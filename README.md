@@ -30,8 +30,8 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
     
 - **data/** 
     - **colony_attributes.csv** [locations, names, and abbreviations for each colony]
-    - **empe_aerial_2023-05-25.csv** []
-    - **empe_satellite_2023-05-25.csv** []
+    - **empe_aerial_2023-05-25.csv** [raw data associated with aerial counts of emperor penguin colonies]
+    - **empe_satellite_2023-05-25.csv** [raw data associated with satellite surveys of emperor penguin colonies]
     - **fast_ice_trends.csv** [data related to regional trends in Antarctic fast ice, extracted from Table 1 in [Fraser et al. 2021](https://tc.copernicus.org/articles/15/5061/2021/)]
 
 ## Sharing/Access information
