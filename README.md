@@ -16,7 +16,7 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
 
 - analysis
     - output
-        - data_viz ** contains stuff **
+        - data_viz **contains stuff**
         - model_checks
         - model_results
             - Global_Level
@@ -24,6 +24,8 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
             - Colony_Level
             - parameter_estimates.csv
         - simulation
+        - EMPE_data_formatted.RData
+        - fitted_model.RData
 
 |  |  |- model_results
 |  |  |  |- 1_Global_Level
