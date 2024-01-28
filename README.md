@@ -16,15 +16,14 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
 
 - analysis
     - output
-|  |  |- data_viz ** contains stuff **
-|  |  |- model_checks
-|  |  |- model_results
-|  |  |  |- Global_Level
-|  |  |  |- Regional_Level
-|  |  |  |- Colony_Level
-|  |  |  |- parameter_estimates.csv
-
-|  |  |- simulation
+        - data_viz ** contains stuff **
+        - model_checks
+        - model_results
+            - Global_Level
+            - Regional_Level
+            - Colony_Level
+            - parameter_estimates.csv
+        - simulation
 
 |  |  |- model_results
 |  |  |  |- 1_Global_Level
