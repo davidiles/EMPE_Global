@@ -16,16 +16,16 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
 
 - analysis
     - output
-        - data_viz **contains stuff**
-        - model_checks
-        - model_results
-            - Global_Level
-            - Regional_Level
-            - Colony_Level
-            - parameter_estimates.csv
-        - simulation
-        - EMPE_data_formatted.RData
-        - fitted_model.RData
+        - data_viz **[visualizations of raw data] **
+        - model_checks **[goodness-of-fit assessments] **
+        - model_results 
+            - Global_Level **[global estimates population abundance, change, and trend]**
+            - Regional_Level **[regional estimates population abundance, change, and trend]**
+            - Colony_Level **[colony-level estimates population abundance, change, and trend]**
+            - parameter_estimates.csv **[parameter estimates from fitted Bayesian model]**
+        - simulation **[raw results and figures related to simulations]**
+        - EMPE_data_formatted.RData **[formatted data for analysis, after cleaning]**
+        - fitted_model.RData **[bayesian output in JAGS]**
 
 |  |  |- model_results
 |  |  |  |- 1_Global_Level
