@@ -12,8 +12,8 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
 
 ## File structure
 
-- **analysis/**
-    - **output/**
+- **analysis/** 
+    - **output/** 
         - **data_viz/** [visualizations of raw data] 
         - **model_checks/** [goodness-of-fit assessments]
         - **model_results/** 
