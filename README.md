@@ -12,23 +12,23 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
 
 ## File structure
 
-- **analysis**
-    - **output**
-        - **data_viz** [visualizations of raw data] 
-        - **model_checks** [goodness-of-fit assessments]
-        - **model_results** 
-            - **Global_Level** [global estimates of population abundance, change, and trend]
-            - **Regional_Level** [regional estimates of population abundance, change, and trend]
-            - **Colony_Level** [colony-level estimates of population abundance, change, and trend]
+- **analysis/**
+    - **output/**
+        - **data_viz/** [visualizations of raw data] 
+        - **model_checks/** [goodness-of-fit assessments]
+        - **model_results/** 
+            - **Global_Level/** [global estimates of population abundance, change, and trend]
+            - **Regional_Level/** [regional estimates of population abundance, change, and trend]
+            - **Colony_Level/** [colony-level estimates of population abundance, change, and trend]
             - **parameter_estimates.csv** [parameter estimates from fitted Bayesian model]
-        - **simulation** [raw results and figures related to simulations]
+        - **simulation/** [raw results and figures related to simulations]
         - **EMPE_data_formatted.RData** [formatted data for analysis, after cleaning]
         - **fitted_model.RData** [bayesian output in JAGS]
     - **script1_PrepareData.R**
     - **script2_FitModel.R**
     - **script3_Simulation.R**
     
-- **data**
+- **data/**
     - **colony_attributes.csv** []
     - **empe_aerial_2023-05-25.csv** []
     - **empe_satellite_2023-05-25.csv** []
