@@ -16,7 +16,7 @@ my.packs <- c(
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
-setwd("~/1_Work/EMPE_Global/analysis")
+setwd("C:/Users/IlesD/OneDrive - EC-EC/Iles/Projects/X_other_projects/EMPE_Global/analysis")
 
 rm(list=ls())
 
@@ -191,7 +191,7 @@ inits <- function(){list(r_mean = rnorm(jags.data$n_sites,0,0.03),
 # out <- jags(data=jags.data,
 #             model.file="EMPE_model_empirical.jags",
 #             parameters.to.save=c(
-# 
+#               
 #               # ------------------------
 #               # Hyper-parameters
 #               # ------------------------
@@ -201,53 +201,53 @@ inits <- function(){list(r_mean = rnorm(jags.data$n_sites,0,0.03),
 #               "logX1_mean",              # Hierarchical grand mean of colony-level initial abundances
 #               "logX1_sigma",             # Hierarchical sd of colony-level initial abundances
 #               "r_sigma",                 # Temporal variance of colony-level annual growth rates
-# 
+#               
 #               "DoS_slope",
 #               "aerial_sigma",            # SD of aerial observations (on log scale)
 #               "sat_slope",               # Bias in satellite observations
 #               "sat_CV",                  # Coefficient of variation in satellite observations
-# 
+#               
 #               # ------------------------
 #               # Colony-specific quantities
 #               # ------------------------
-# 
+#               
 #               # Colony-specific mean annual differences (could be used as a measure of colony-specific "trend")
 #               "r_mean",
-# 
+#               
 #               # Colony-specific index of abundance each year
 #               "N",
-# 
+#               
 #               # ------------------------
 #               # Global index and trend estimates
 #               # ------------------------
-# 
+#               
 #               # Global index of abundance each year
 #               "N_global",
-# 
+#               
 #               # Log-linear OLS slope across the study
 #               "global_trend",
-# 
+#               
 #               # ------------------------
 #               # Observation-specific quantities
 #               # ------------------------
-# 
+#               
 #               # Fitted values
 #               "adult_expected",
 #               "sat_expected",
 #               "sat_sigma",
-# 
+#               
 #               # Discrepancy measures for posterior predictive checks
 #               "RMSE_adult_count_actual",
 #               "RMSE_satellite_actual",
 #               "RMSE_adult_count_sim",
 #               "RMSE_satellite_sim",
-# 
+#               
 #               # Simulated datasets from fitted model (also for goodness-of-fit testing)
 #               "sim_adult_count",
 #               "sim_satellite"
-# 
+#               
 #             ),
-# 
+#             
 #             inits = inits,
 #             n.chains=3,
 #             n.thin = 10*5,
@@ -256,15 +256,14 @@ inits <- function(){list(r_mean = rnorm(jags.data$n_sites,0,0.03),
 #             parallel = TRUE)
 # 
 # save(out, file = "output/fitted_model.RData")
-load(file = "output/fitted_model.RData")
-
-
 
 # **************************************************************************************************
 # **************************************************************************************************
 # MODEL CONVERGENCE AND GOODNESS-OF-FIT
 # **************************************************************************************************
 # **************************************************************************************************
+
+load(file = "output/fitted_model.RData")
 
 #----------------------------------------------------------
 # Examine model convergence
@@ -284,7 +283,7 @@ hyper_parameters <- c(
   "DoS_slope",              # Effect of "day of season"
   "aerial_sigma",           # SD of aerial observations (on log scale)
   "sat_slope",              # Bias in satellite observations
-  "sat_CV"                 # Coefficient of variation in satellite observations
+  "sat_CV"                  # Coefficient of variation in satellite observations
   
 )
 
@@ -292,7 +291,8 @@ Rhats <- unlist(out$Rhat[which(names(out$Rhat) %in% hyper_parameters)])
 mean(Rhats > 1.1, na.rm = TRUE) # Proportion of parameters with Rhat > 1.1
 max(Rhats, na.rm=TRUE) # max Rhat
 Rhats[which(Rhats > 1.1)]
-MCMCtrace(out, params = hyper_parameters, Rhat = TRUE, filename = "output/model_checks/traceplot_hyperparams.pdf")
+
+MCMCtrace(out, params = hyper_parameters, Rhat = TRUE, filename = "output/figures_and_tables/model_checks/traceplot_hyperparams.pdf")
 
 indices_and_trends <- c(
   
@@ -322,7 +322,7 @@ Rhats <- unlist(out$Rhat[which(names(out$Rhat) %in% indices_and_trends)])
 mean(Rhats > 1.1, na.rm = TRUE) # Proportion of parameters with Rhat > 1.1
 max(Rhats, na.rm=TRUE) # max Rhat
 Rhats[which(Rhats > 1.1)] # N125     N353 
-MCMCtrace(out, params = indices_and_trends, Rhat = TRUE, filename = "output/model_checks/traceplot_indices.pdf")
+MCMCtrace(out, params = indices_and_trends, Rhat = TRUE, filename = "output/figures_and_tables/model_checks/traceplot_indices.pdf")
 
 # Effective sample sizes
 n.eff <- unlist(out$n.eff)
@@ -364,9 +364,8 @@ plot2 <- ggplot(data = df_sat,
   theme_bw()
 
 pval_plot <- ggarrange(plot1,plot2,nrow=2)
-#pval_plot
 
-png("./output/model_checks/Bayesian_pval_plot.png", width = 5, height = 7, units = "in",res=500)
+png("./output/figures_and_tables/model_checks/Bayesian_pval_plot.png", width = 5, height = 7, units = "in",res=500)
 print(pval_plot)
 dev.off()
 
@@ -381,7 +380,7 @@ sim_aerial = createDHARMa(simulatedResponse = t(out$sims.list$sim_adult_count), 
                           fittedPredictedResponse = apply(out$sims.list$adult_expected, 2, median),
                           integerResponse = T)
 
-png("./output/model_checks/DHARMa_AdultCounts.png", width = 8, height = 5, units = "in",res=500)
+png("./output/figures_and_tables/model_checks/DHARMa_AdultCounts.png", width = 8, height = 5, units = "in",res=500)
 plot(sim_aerial)
 dev.off()
 
@@ -397,7 +396,7 @@ sim_sat = createDHARMa(simulatedResponse = t(out$sims.list$sim_satellite),
                        fittedPredictedResponse = apply(out$sims.list$sat_expected, 2, median),
                        integerResponse = T)
 
-png("./output/model_checks/DHARMa_Satellite.png", width = 8, height = 5, units = "in",res=500)
+png("./output/figures_and_tables/model_checks/DHARMa_Satellite.png", width = 8, height = 5, units = "in",res=500)
 plot(sim_sat)
 dev.off()
 
@@ -412,7 +411,7 @@ dev.off()
 #----------------------------------------------------------
 
 parameter_estimates = out$summary[1:which(rownames(out$summary) == "sat_CV[3]"),] %>% as.data.frame()
-write.csv(parameter_estimates, file = "output/model_results/parameter_estimates.csv", row.names = TRUE)
+write.csv(parameter_estimates, file = "output/figures_and_tables/model_results/parameter_estimates.csv", row.names = TRUE)
 
 #----------------------------------------------------------
 # Function to calculate estimate of 'overall change' between endpoints (2009 and 2018) and
@@ -882,8 +881,6 @@ dev.off()
 rho = DescTools::SpearmanRho(popchange_fastice$Prob_Decline,popchange_fastice$FastIceTrend,conf.level = 0.95)
 rho
 
-
-
 # ***************************************************************************
 # ***************************************************************************
 # DEPRECATED CODE THAT COULD BE USEFUL FOR VISUALIZING/INTERPRETING DYNAMICS
@@ -946,20 +943,20 @@ change_annual <- data.frame()
 
 # For each colony, in each year, for each mcmc sample, calculate percent change between years
 for (mc_sample in 1:dim(out$sims.list$N)[1]){
-
+  
   N_matrix <- out$sims.list$N[mc_sample,,]
   N_matrix[N_matrix == 0] <- NA
-
+  
   tmp <- apply(log(N_matrix),1,function(x)diff(x)) %>%
     reshape2::melt() %>%
     dplyr::rename(year_number = Var1,
                   site_number = Var2,
                   log_change = value) %>%
     mutate(mc_sample = mc_sample)
-
-
+  
+  
   change_annual <- rbind(change_annual, tmp)
-
+  
   print(mc_sample)
 }
 

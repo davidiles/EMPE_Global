@@ -242,7 +242,7 @@ plot1 <- ggplot(colonies_surveyed_annual, aes(x = year, y = n, fill = survey_typ
   theme_bw()+
   ggtitle("Number of colonies surveyed per year")
 
-png("output/figures_and_tables/data_viz/plot1_nsurveys.png", units = "in", res = 500, 
+png("output/data_viz/plot1_nsurveys.png", units = "in", res = 500, 
     width = 8, height = 5)
 print(plot1)
 dev.off()
@@ -284,7 +284,7 @@ p2_sat <- ggplot(sat_colony_months, aes(x = year, y = n, fill = month.name)) +
 # combine into single figure
 plot2 <- ggarrange(p2_aer,p2_sat,nrow=2,align="hv")
 
-png("output/figures_and_tables/data_viz/plot2_survey_phenology.png", units = "in", res = 500, 
+png("output/data_viz/plot2_survey_phenology.png", units = "in", res = 500, 
     width = 8, height = 8)
 print(plot2)
 dev.off()
@@ -320,10 +320,6 @@ plot3 <- ggplot() +
   theme_bw()+
   geom_hline(yintercept = 0, linetype = 2, col = "transparent")
 
-png("output/figures_and_tables/data_viz/plot3_raw_data.png", units = "in", res = 1000, width = 20, height = 20)
-print(plot3)
-dev.off()
-
-pdf("output/figures_and_tables/data_viz/plot3_raw_data.pdf", width = 20, height = 20)
+pdf("output/data_viz/plot3_raw_data.pdf", width = 20, height = 20)
 print(plot3)
 dev.off()
