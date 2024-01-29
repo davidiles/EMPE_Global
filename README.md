@@ -36,4 +36,10 @@ Simulations are also performed to evaluate the ability of the model to accuratel
 
 ## Sharing/Access information
 
-This is a section for linking to other ways to access the data, and for linking to sources the data is derived from, if any.
+Data is openly accessible through Dryad (link).
+
+## Code summary
+
+There are 3 scripts in this repository.
+
+1) `script1` does this thing.
