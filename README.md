@@ -1,4 +1,4 @@
-# LaRue et al. (2024) Advances in remote sensing of emperor penguins: first multi-year time series documenting global population change
+# LaRue et al. (2024): Advances in remote sensing of emperor penguins: first multi-year time series documenting global population change
 
 [Access this dataset on Dryad](Dataset DOI link)
 
