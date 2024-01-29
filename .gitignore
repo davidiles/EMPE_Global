@@ -1,5 +1,5 @@
 *.tmp
-*.RData
+analysis/output/fitted_model.RData
 *.ini
 analysis/.Rhistory
 analysis/script4_simulation.R
