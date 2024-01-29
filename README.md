@@ -14,7 +14,7 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
 
 - **analysis/** 
     - **output/** 
-        - **data_viz/** [visualizations of raw data] 
+        - **data_viz/**    [visualizations of raw data] 
         - **model_checks/** [goodness-of-fit assessments]
         - **model_results/** 
             - **Global_Level/** [global estimates of population abundance, change, and trend]
