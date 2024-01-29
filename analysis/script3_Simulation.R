@@ -5,7 +5,7 @@ my.packs <- c('jagsUI',"ggplot2",'reshape2',
 if (any(!my.packs %in% installed.packages()[, 'Package']))install.packages(my.packs[which(!my.packs %in% installed.packages()[, 'Package'])],dependencies = TRUE)
 lapply(my.packs, require, character.only = TRUE)
 
-setwd("~/1_Work/EMPE_Global/analysis")
+setwd("C:/Users/IlesD/OneDrive - EC-EC/Iles/Projects/X_other_projects/EMPE_Global/analysis")
 
 rm(list=ls())
 
@@ -120,7 +120,7 @@ if (!file.exists("./output/simulation/sim_results.RData")){
 # and statistical model is applied to estimate global abundance and trend
 # --------------------------------------
 
-for (sim_run in rev(seq(1,1000,1))){
+for (sim_run in seq(1,1000,1)){
   
   set.seed(sim_run)
   
@@ -426,8 +426,6 @@ for (sim_run in rev(seq(1,1000,1))){
 load(file = "./output/simulation/sim_results.RData")
 
 simulation_results <- subset(simulation_results, Rhat_hyper == 0 & Rhat_indices == 0)
-nrow(simulation_results)
-simulation_results <- simulation_results[1:500,]
 
 # ---------------------------------------
 # Trend (average annual percent change from 2009 to 2018)
@@ -533,12 +531,7 @@ pvals_satellite <- ggplot(simulation_results, aes(x = Bayesian_pval_satellite))+
   scale_x_continuous(breaks = seq(-0.2,1.2,0.2), limits = c(0,1))
 
 pval_plot <- ggarrange(pvals_adult,pvals_satellite,nrow=2)
-#pval_plot
 
 png("./output/simulation/Bayesian_pval_plot.png", width = 5, height = 7, units = "in",res=500)
 print(pval_plot)
 dev.off()
-
-# Percent of simulations with Bayesian-pvals less than empirical Bayesian pval
-# (is the Bayesian p-value calculated for empirical data within the "envelope" of
-#   expected p-values for perfectly specified models?)
