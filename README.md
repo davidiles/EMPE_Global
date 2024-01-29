@@ -4,17 +4,17 @@
 
 # Overview
 
-This repository contains data, code, and model output associated with the analysis of Emperor penguin population dynamics described in LaRue et al. (2024).
+This repository contains data, code, and model output associated with the global-scale analysis of Emperor penguin population dynamics described in LaRue et al. (2024), based on integrating raw data from aerial surveys with time series of circumpolar satellite surveys of known emperor penguin colonies.
 
-Raw data for the analysis are  included aerial and ground-based observations
+The model is used to estimate an annual index of abundance at every known Emperor penguin colony in Antarctica (as of 2018), for every year between 2008 and 2018. Regional and global population indices are then calculated by summing colony-level estimates, according to regional colony membership.
 
-Give a brief summary of dataset contents, contextualized in experimental procedures and results.
+Simulations are also performed to evaluate the ability of the model to accurately detect population trends, if they exist.
 
-## File structure
+## File structure and description
 
 - **analysis/** 
     - **output/** 
-        - **data_viz/**    [visualizations of raw data] 
+        - **data_viz/** [visualizations of raw data] 
         - **model_checks/** [goodness-of-fit assessments]
         - **model_results/** 
             - **Global_Level/** [global estimates of population abundance, change, and trend]
@@ -37,16 +37,3 @@ Give a brief summary of dataset contents, contextualized in experimental procedu
 ## Sharing/Access information
 
 This is a section for linking to other ways to access the data, and for linking to sources the data is derived from, if any.
-
-Links to other publicly accessible locations of the data:
- - [http://...](http://...)
-
-Data was derived from the following sources:
- - []()
-
-
-## Code/Software
-
-This is an optional, freeform section for describing any code in your submission and the software used to run it.
-
-Describe any scripts, code, or notebooks (e.g., R, Python, Mathematica, MatLab) as well as the software versions (including loaded packages) that you used to run those files. If your repository contains more than one file whose relationship to other scripts is not obvious, provide information about the workflow that you used to run those scripts and notebooks.
