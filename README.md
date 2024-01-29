@@ -24,7 +24,7 @@ Simulations are also performed to evaluate the ability of the model to accuratel
         - **simulation/** [raw results and figures related to simulations]
         - **EMPE_data_formatted.RData** [formatted data for analysis, after cleaning]
         - **fitted_model.RData** [Bayesian output in JAGS]
-    - `script1_PrepareData.R`**` [R script to visualize, clean, and package raw data for analysis with JAGS]
+    - `script1_PrepareData.R` [R script to visualize, clean, and package raw data for analysis with JAGS]
     - `script2_FitModel.R` [R script to fit model, check convergence, evaluate goodness of fit, and generate results, figures, and summary statistics]
     - `script3_Simulation.R` [R script to conduct simulations; used for testing the Bayesian modeling approach]
     
