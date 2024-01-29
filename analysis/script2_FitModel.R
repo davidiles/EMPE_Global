@@ -265,10 +265,11 @@ inits <- function(){list(r_mean = rnorm(jags.data$n_sites,0,0.03),
 
 load(file = "output/fitted_model.RData")
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Examine model convergence
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
+# Convergence of relevant hyper-parameters in model
 hyper_parameters <- c(
   
   # ------------------------
@@ -291,30 +292,24 @@ Rhats <- unlist(out$Rhat[which(names(out$Rhat) %in% hyper_parameters)])
 mean(Rhats > 1.1, na.rm = TRUE) # Proportion of parameters with Rhat > 1.1
 max(Rhats, na.rm=TRUE) # max Rhat
 Rhats[which(Rhats > 1.1)]
+MCMCtrace(out, params = hyper_parameters, Rhat = TRUE, filename = "output/model_checks/traceplot_hyperparams.pdf")
 
-MCMCtrace(out, params = hyper_parameters, Rhat = TRUE, filename = "output/figures_and_tables/model_checks/traceplot_hyperparams.pdf")
-
+# Convergence of relevant population indices and derived parameters
 indices_and_trends <- c(
   
   # ------------------------
   # Global estimates
   # ------------------------
   
-  # Global abundance each year
-  "N_global",
-  
-  # Log-linear OLS slope across the study
-  "global_trend",
+  "N_global",     # Global abundance each year
+  "global_trend", # Log-linear OLS slope across the study
   
   # ------------------------
   # Colony-level estimates
   # ------------------------
-  
-  # Colony-specific mean annual differences
-  "r_mean",
-  
-  # Colony-specific abundance each year
-  "N"
+
+  "r_mean", # Colony-specific mean annual differences
+  "N"       # Colony-specific abundance each year
   
 )
 
@@ -322,15 +317,15 @@ Rhats <- unlist(out$Rhat[which(names(out$Rhat) %in% indices_and_trends)])
 mean(Rhats > 1.1, na.rm = TRUE) # Proportion of parameters with Rhat > 1.1
 max(Rhats, na.rm=TRUE) # max Rhat
 Rhats[which(Rhats > 1.1)] # N125     N353 
-MCMCtrace(out, params = indices_and_trends, Rhat = TRUE, filename = "output/figures_and_tables/model_checks/traceplot_indices.pdf")
+MCMCtrace(out, params = indices_and_trends, Rhat = TRUE, filename = "output/model_checks/traceplot_indices.pdf")
 
 # Effective sample sizes
 n.eff <- unlist(out$n.eff)
-n.eff[n.eff > 1 & n.eff <= 2500] # Parameters with fewer than 2000 samples
+n.eff[n.eff > 1 & n.eff <= 2500] # Parameters with fewer than 2500 samples
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Posterior predictive checks
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 pval_adult <- mean(out$sims.list$RMSE_adult_count_actual > out$sims.list$RMSE_adult_count_sim) %>% round(2)
 lim <- range(c(out$sims.list$RMSE_adult_count_actual,out$sims.list$RMSE_adult_count_sim))
@@ -365,7 +360,7 @@ plot2 <- ggplot(data = df_sat,
 
 pval_plot <- ggarrange(plot1,plot2,nrow=2)
 
-png("./output/figures_and_tables/model_checks/Bayesian_pval_plot.png", width = 5, height = 7, units = "in",res=500)
+png("./output/model_checks/Bayesian_pval_plot.png", width = 5, height = 7, units = "in",res=500)
 print(pval_plot)
 dev.off()
 
@@ -380,7 +375,7 @@ sim_aerial = createDHARMa(simulatedResponse = t(out$sims.list$sim_adult_count), 
                           fittedPredictedResponse = apply(out$sims.list$adult_expected, 2, median),
                           integerResponse = T)
 
-png("./output/figures_and_tables/model_checks/DHARMa_AdultCounts.png", width = 8, height = 5, units = "in",res=500)
+png("./output/model_checks/DHARMa_AdultCounts.png", width = 8, height = 5, units = "in",res=500)
 plot(sim_aerial)
 dev.off()
 
@@ -396,7 +391,7 @@ sim_sat = createDHARMa(simulatedResponse = t(out$sims.list$sim_satellite),
                        fittedPredictedResponse = apply(out$sims.list$sat_expected, 2, median),
                        integerResponse = T)
 
-png("./output/figures_and_tables/model_checks/DHARMa_Satellite.png", width = 8, height = 5, units = "in",res=500)
+png("./output/model_checks/DHARMa_Satellite.png", width = 8, height = 5, units = "in",res=500)
 plot(sim_sat)
 dev.off()
 
@@ -406,17 +401,17 @@ dev.off()
 # **************************************************************************************************
 # **************************************************************************************************
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Output a table of parameter estimates
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 parameter_estimates = out$summary[1:which(rownames(out$summary) == "sat_CV[3]"),] %>% as.data.frame()
-write.csv(parameter_estimates, file = "output/figures_and_tables/model_results/parameter_estimates.csv", row.names = TRUE)
+write.csv(parameter_estimates, file = "output/model_results/parameter_estimates.csv", row.names = TRUE)
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Function to calculate estimate of 'overall change' between endpoints (2009 and 2018) and
 #   log-linear slope (a measure of trend) across study
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 # Accepts an n_samp x n_year matrix of abundance estimates
 change_trend_fn <- function(mat){
@@ -438,9 +433,6 @@ change_trend_fn <- function(mat){
   OLS_regression_samples <- rep(NA,n_samps)
   for (i in 1:n_samps) OLS_regression_samples[i] <- regression_weights %*% log(mat[i,]) # OLS slope, on log scale
   
-  # Convert to percent change per year
-  #OLS_regression_samples <- 100*(exp(OLS_regression_samples)-1) # Convert to percent change per year
-  
   OLS_regression_summary <- c(mean = mean(OLS_regression_samples),
                               SE = sd(OLS_regression_samples),
                               quantile(OLS_regression_samples,c(0.025,0.05,0.5,0.95,0.975)),
@@ -457,9 +449,9 @@ change_trend_fn <- function(mat){
               OLS_regression_summary = OLS_regression_summary))
 }
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Convert colony-level abundance mcmc samples to dataframe
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 N_samples <- out$sims.list$N %>% 
   reshape2::melt() %>% 
@@ -513,15 +505,14 @@ global_plot <- ggplot(global_abundance_summary, aes(x = Year, y = N_mean, ymin =
   #ggtitle("Global population")+
   scale_y_continuous(labels = comma, expand = expansion(mult = c(0.25, 0.25)))+
   theme_few()
-print(global_plot)
 
 tiff(filename = "output/model_results/1_Global_Level/global_trajectory.tif", width = 5, height = 4, units = "in", res = 300)
 print(global_plot)
 dev.off()
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Contextualize global log-linear trend estimate
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 # Log-linear slope from 2009 to 2018
 global_trend_summary <- data.frame(Region = "Global",
@@ -559,9 +550,9 @@ write.csv(global_abundance_summary, file = "output/model_results/1_Global_Level/
 write.csv(global_change_summary, file = "output/model_results/1_Global_Level/GLOBAL_change.csv", row.names = FALSE)
 write.csv(global_trend_summary, file = "output/model_results/1_Global_Level/GLOBAL_trend.csv", row.names = FALSE)
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Calculate change since 2009 at each colony
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 delta_N_samples = data.frame()
 N_2009 = out$sims.list$N[,,1]
@@ -586,9 +577,9 @@ for (t in 1:jags.data$n_years){
 # Join with N_samples dataframe
 N_samples = full_join(N_samples, delta_N_samples)
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Summarize dynamics at each colony
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 colony_summary = N_samples %>%
   group_by(year, site_number) %>%
@@ -613,9 +604,9 @@ colony_summary = N_samples %>%
 
 write.csv(colony_summary, file = "output/model_results/3_Colony_Level/colony_summary.csv", row.names = FALSE)
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Plot dynamics within each colony
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 aer$img_qualit = 3
 p1 <- ggplot() +
@@ -654,15 +645,15 @@ print(p1)
 dev.off()
 
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Summarize regional dynamics
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Function to calculate regional indices, and change/trend estimates for
 #    any grouping of colonies (e.g., based on fast ice regions, ccamlr sectors,
 #    colonies inside/outside protected areas, etc)
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 # Accepts an n_samp x n_year matrix of abundance estimates
 regional_estimate_fn <- function(region_names = NA, 
@@ -878,6 +869,7 @@ tiff(filename = "output/model_results/2_Regional_Level/sea_ice_correlation.tif",
 print(sea_ice_plot)
 dev.off()
 
+# Correlation between fast ice trend and regional population trends
 rho = DescTools::SpearmanRho(popchange_fastice$Prob_Decline,popchange_fastice$FastIceTrend,conf.level = 0.95)
 rho
 
@@ -938,59 +930,59 @@ rho
 # #----------------------------------------------------------
 # # Evaluate magnitude of change between years at each colony
 # #----------------------------------------------------------
-
-change_annual <- data.frame()
-
-# For each colony, in each year, for each mcmc sample, calculate percent change between years
-for (mc_sample in 1:dim(out$sims.list$N)[1]){
-  
-  N_matrix <- out$sims.list$N[mc_sample,,]
-  N_matrix[N_matrix == 0] <- NA
-  
-  tmp <- apply(log(N_matrix),1,function(x)diff(x)) %>%
-    reshape2::melt() %>%
-    dplyr::rename(year_number = Var1,
-                  site_number = Var2,
-                  log_change = value) %>%
-    mutate(mc_sample = mc_sample)
-  
-  
-  change_annual <- rbind(change_annual, tmp)
-  
-  print(mc_sample)
-}
-
-# Calculate summaries of magnitude of change between consecutive years at each colony
-# test1 <- change_annual %>%
-#   group_by(mc_sample, site_number) %>%
-#   summarize(ratio_med = median(ratio, na.rm = TRUE),
-#             percent_change_med = median(percent_change, na.rm = TRUE))
-
-test2 <- change_annual %>%
-  group_by(year_number, site_number) %>%
-  summarize(log_change_mean = mean(log_change, na.rm = TRUE),
-            log_change_q05 = quantile(log_change,0.05, na.rm = TRUE),
-            log_change_q95 = quantile(log_change,0.95, na.rm = TRUE)) %>%
-  full_join(colony_attributes[,c("site_id","site_number")],.)
-
-scale_y <- data.frame(log_diff = c(log(0.5),log(0.75),log(1),-log(0.75),-log(0.5)))
-scale_y$percent_change <- (100*(exp(scale_y$log_diff)-1)) %>% round()
-scale_y$label <- paste0(scale_y$percent_change,"%")
-scale_y$label[4:5] <- paste0("+",scale_y$label[4:5])
-scale_y
-
-ggplot(test2, aes(x = year_number, y = log_change_mean, ymin = log_change_q05, ymax = log_change_q95))+
-  geom_point()+
-  geom_errorbar(width=0)+
-  facet_wrap(site_id~.)+
-  scale_y_continuous(breaks = scale_y$log_diff, labels = scale_y$label)+
-  theme_bw()+
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank())+
-  geom_hline(yintercept = c(log(0.5),-log(0.5)), col = "orangered", alpha = 0.5)+
-  geom_hline(yintercept = c(log(0.75),-log(0.75)), col = "orangered", alpha = 0.25)+
-  geom_hline(yintercept = 0, col = "orangered", alpha = 0.1)
-
+# 
+# change_annual <- data.frame()
+# 
+# # For each colony, in each year, for each mcmc sample, calculate percent change between years
+# for (mc_sample in 1:dim(out$sims.list$N)[1]){
+#   
+#   N_matrix <- out$sims.list$N[mc_sample,,]
+#   N_matrix[N_matrix == 0] <- NA
+#   
+#   tmp <- apply(log(N_matrix),1,function(x)diff(x)) %>%
+#     reshape2::melt() %>%
+#     dplyr::rename(year_number = Var1,
+#                   site_number = Var2,
+#                   log_change = value) %>%
+#     mutate(mc_sample = mc_sample)
+#   
+#   
+#   change_annual <- rbind(change_annual, tmp)
+#   
+#   print(mc_sample)
+# }
+# 
+# # Calculate summaries of magnitude of change between consecutive years at each colony
+# # test1 <- change_annual %>%
+# #   group_by(mc_sample, site_number) %>%
+# #   summarize(ratio_med = median(ratio, na.rm = TRUE),
+# #             percent_change_med = median(percent_change, na.rm = TRUE))
+# 
+# test2 <- change_annual %>%
+#   group_by(year_number, site_number) %>%
+#   summarize(log_change_mean = mean(log_change, na.rm = TRUE),
+#             log_change_q05 = quantile(log_change,0.05, na.rm = TRUE),
+#             log_change_q95 = quantile(log_change,0.95, na.rm = TRUE)) %>%
+#   full_join(colony_attributes[,c("site_id","site_number")],.)
+# 
+# scale_y <- data.frame(log_diff = c(log(0.5),log(0.75),log(1),-log(0.75),-log(0.5)))
+# scale_y$percent_change <- (100*(exp(scale_y$log_diff)-1)) %>% round()
+# scale_y$label <- paste0(scale_y$percent_change,"%")
+# scale_y$label[4:5] <- paste0("+",scale_y$label[4:5])
+# scale_y
+# 
+# ggplot(test2, aes(x = year_number, y = log_change_mean, ymin = log_change_q05, ymax = log_change_q95))+
+#   geom_point()+
+#   geom_errorbar(width=0)+
+#   facet_wrap(site_id~.)+
+#   scale_y_continuous(breaks = scale_y$log_diff, labels = scale_y$label)+
+#   theme_bw()+
+#   theme(panel.grid.minor = element_blank(),
+#         panel.grid.major = element_blank())+
+#   geom_hline(yintercept = c(log(0.5),-log(0.5)), col = "orangered", alpha = 0.5)+
+#   geom_hline(yintercept = c(log(0.75),-log(0.75)), col = "orangered", alpha = 0.25)+
+#   geom_hline(yintercept = 0, col = "orangered", alpha = 0.1)
+# 
 # #----------------------------------------------------------
 # # Sequentially remove each colony and recalculate global trend
 # #  - provides insight into the effect each colony has on the global trend
