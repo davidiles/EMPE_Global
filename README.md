@@ -10,7 +10,7 @@ The model is used to estimate an annual index of abundance at every known Empero
 
 Simulations are also performed to evaluate the ability of the model to accurately detect population trends, if they exist.
 
-## File structure and description
+## File structure and code description
 
 - **analysis/** 
     - **output/** 
@@ -37,9 +37,3 @@ Simulations are also performed to evaluate the ability of the model to accuratel
 ## Sharing/Access information
 
 Data is openly accessible through Dryad (link).
-
-## Code summary
-
-There are 3 scripts in this repository.
-
-1) `script1` does this thing.
