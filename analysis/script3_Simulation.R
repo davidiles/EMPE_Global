@@ -336,7 +336,7 @@ for (sim_run in seq(1,1000,1)){
     "DoS_slope",              # Effect of "day of season"
     "aerial_sigma",           # SD of aerial observations (on log scale)
     "sat_slope",              # Bias in satellite observations
-    "sat_CV"                 # Coefficient of variation in satellite observations
+    "sat_CV"                  # Coefficient of variation in satellite observations
     
   )
   
@@ -459,7 +459,7 @@ trend_plot <- ggplot(simulation_results,aes(x = global_trend_true,
   labs(title = paste0("Simulation results"),
        subtitle = paste0("Median bias of trend estimate = ",med_trend_bias,"%\n95% credible interval coverage = ",trend_coverage*100,"%"))+
   theme_bw()
-#print(trend_plot)
+print(trend_plot)
 
 png("./output/simulation/trend_sim_results.png", width = 5, height = 4, units = "in",res=500)
 print(trend_plot)
@@ -504,7 +504,7 @@ percent_change_plot <- ggplot(simulation_results,
   labs(title = paste0("Simulation results"),
        subtitle = paste0("Median bias of change estimate = ",med_percent_change_bias,"%\n95% credible interval coverage = ",percent_change_coverage*100,"%"))+
   theme_bw()
-#print(percent_change_plot)
+print(percent_change_plot)
 
 png("./output/simulation/change_sim_results.png", width = 5, height = 4, units = "in",res=500)
 print(percent_change_plot)
